@@ -33,9 +33,9 @@ data Expr : Set where
     var : ℕ → Expr
     lam : Expr → Expr
     app : Expr → Expr → Expr
-    -- new : Expr → Expr
-    -- shift₀ : Expr → Expr → Expr
-    -- reset₀ : Expr → Expr → Expr → Expr
+    new : Expr → Expr
+    shift₀ : Expr → Expr → Expr
+    reset₀ : Expr → Expr → Expr → Expr
 
 
 data _⊢_<⦂_ : TContext → Effects → Effects → Set where
@@ -64,6 +64,14 @@ data _∋_⦂_ : Context → Id → Type → Set where
   S : ∀ {Γ x y A}
     → Γ ∋ x ⦂ A
     → (Γ , y)  ∋ (suc x) ⦂ A
+
+-- data _∋_ : Context  → Type → Set where
+--   Z : ∀ {Γ  A}
+--     → (Γ , A)  ∋  A
+
+--   S : ∀ {Γ x y A}
+--     → Γ ∋ x ⦂ A
+--     → (Γ , y)  ∋  A
 
 data _∋t_⦂_ : TContext → Id → Kind → Set where
   Z : ∀ {Δ k}
@@ -99,13 +107,42 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ e ⦂ forallt k A / []
         
 
-    -- ⊢new : ∀ {Γ Δ e  A A1 E E1}
-    --     → (Δ , Kind.E) , (Γ , (L zero at A1 / E1))  ⊢ e ⦂ A / E
-    --     → Δ , Γ ⊢ new e ⦂ A / E
+    ⊢new : ∀ {Γ Δ e  A A1 E E1}
+        → (Δ , Kind.E) , (Γ , (L zero at A1 / E1))  ⊢ e ⦂ A / E
+        → Δ , Γ ⊢ new e ⦂ A / E
 
-    -- ⊢shift₀ : ∀ {Γ Δ e k A  E}
+    ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
+        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / [] -- ??
+        → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
+        → Δ , Γ ⊢ shift₀ e' e ⦂ A / (n ∷ [])
 
-    -- ⊢reset₀ : ∀ {Γ Δ e k A  E}
+    ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
+        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / [] 
+        → Δ , Γ   ⊢ e ⦂ A / (n ∷ E')
+        → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
+        → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
+
+
 
 data Value : Expr -> Set where
     vlam : ∀ {e } → Value (lam e)
+
+ext : ∀ {Γ Γ'}
+  → (∀ {A n} →       Γ ∋ n ⦂ A →     Γ' ∋ n ⦂ A)
+  → (∀ {A B n} → Γ , B ∋ n ⦂ A → Γ' , B ∋ n ⦂ A)
+ext x Z = Z
+ext x (S x₁) = S (x x₁)
+
+rename : ∀ {Γ Δ E Γ'}
+  → (∀ {A n} →  Γ ∋ n ⦂ A → Γ' ∋ n ⦂ A)
+  → (∀ {A e } → Δ , Γ ⊢ e ⦂ A / E → Δ , Γ' ⊢ e ⦂ A / E)
+
+rename x (⊢var x₁) = ⊢var (x x₁)
+rename x (⊢weak x₁ x₂ x₃) = ⊢weak x₁ x₂ (rename x x₃)
+rename x (⊢lam x₁) = ⊢lam (rename (ext x) x₁)
+rename x (⊢app x₁ x₂) = ⊢app (rename x x₁) (rename x x₂)
+rename x (⊢forall x₁) = ⊢forall (rename x x₁)
+rename x (⊢new x₁) = ⊢new (rename (ext x) x₁)
+rename x (⊢shift₀ x₁ x₂) = ⊢shift₀ (rename x x₁) (rename ((ext x)) x₂)
+rename x (⊢reset₀ x₁ x₂ x₃) = ⊢reset₀ (rename x x₁) (rename x x₂) (rename ((ext x)) x₃)
+
