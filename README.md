@@ -1,0 +1,1 @@
+![nix.yml](https://git.uwukado.me/dyniec/mgr/badges/workflows/nix.yml/badge.svg)
