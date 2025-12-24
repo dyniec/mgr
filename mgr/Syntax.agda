@@ -1,7 +1,9 @@
 module mgr.Syntax where
 
 open import Data.Nat
-open import Data.List 
+open import Data.List using (List;_∷_) renaming ([] to nil)
+open import Relation.Binary.PropositionalEquality using (_≡_;refl)
+
 
 data Kind : Set where
     T : Kind
@@ -40,7 +42,7 @@ data Expr : Set where
 
 data _⊢_<⦂_ : TContext → Effects → Effects → Set where
   Z : ∀ {Δ E}
-    → Δ ⊢ [] <⦂ E 
+    → Δ ⊢ nil <⦂ E 
   S : ∀ {Δ e E1 E2 }
     → Δ ⊢ E1 <⦂ E2
     → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
@@ -103,8 +105,8 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
 
     ⊢forall : ∀ {Γ Δ e k A}
-        → (Δ , k) , Γ  ⊢ e ⦂ A / []
-        → Δ , Γ ⊢ e ⦂ forallt k A / []
+        → (Δ , k) , Γ  ⊢ e ⦂ A / nil
+        → Δ , Γ ⊢ e ⦂ forallt k A / nil
         
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
@@ -112,12 +114,12 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ new e ⦂ A / E
 
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
-        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / [] -- ??
+        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / nil 
         → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
-        → Δ , Γ ⊢ shift₀ e' e ⦂ A / (n ∷ [])
+        → Δ , Γ ⊢ shift₀ e' e ⦂ A / (n ∷ nil)
 
     ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
-        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / [] 
+        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / nil 
         → Δ , Γ   ⊢ e ⦂ A / (n ∷ E')
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
@@ -125,24 +127,48 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
 
 
 data Value : Expr -> Set where
-    vlam : ∀ {e } → Value (lam e)
+    vlam : ∀ { e } → Value (lam e)
 
-ext : ∀ {Γ Γ'}
-  → (∀ {A n} →       Γ ∋ n ⦂ A →     Γ' ∋ n ⦂ A)
-  → (∀ {A B n} → Γ , B ∋ n ⦂ A → Γ' , B ∋ n ⦂ A)
-ext x Z = Z
-ext x (S x₁) = S (x x₁)
+Rename = ℕ -> ℕ
 
-rename : ∀ {Γ Δ E Γ'}
-  → (∀ {A n} →  Γ ∋ n ⦂ A → Γ' ∋ n ⦂ A)
-  → (∀ {A e } → Δ , Γ ⊢ e ⦂ A / E → Δ , Γ' ⊢ e ⦂ A / E)
+Subst = ℕ -> Expr
 
-rename x (⊢var x₁) = ⊢var (x x₁)
-rename x (⊢weak x₁ x₂ x₃) = ⊢weak x₁ x₂ (rename x x₃)
-rename x (⊢lam x₁) = ⊢lam (rename (ext x) x₁)
-rename x (⊢app x₁ x₂) = ⊢app (rename x x₁) (rename x x₂)
-rename x (⊢forall x₁) = ⊢forall (rename x x₁)
-rename x (⊢new x₁) = ⊢new (rename (ext x) x₁)
-rename x (⊢shift₀ x₁ x₂) = ⊢shift₀ (rename x x₁) (rename ((ext x)) x₂)
-rename x (⊢reset₀ x₁ x₂ x₃) = ⊢reset₀ (rename x x₁) (rename x x₂) (rename ((ext x)) x₃)
+ext : Rename → Rename 
+ext ρ zero    = zero
+ext ρ (suc x) = suc (ρ x)
 
+rename : Rename → (Expr -> Expr)
+rename ρ (var x₁) = var (ρ x₁)
+rename ρ (lam x₁) = lam (rename (ext ρ) x₁)
+rename ρ (app x₁ x₂) = app (rename ρ x₁) (rename ρ x₂)
+rename ρ (new x₁) = new (rename (ext ρ) x₁)
+rename ρ (shift₀ x₁ x₂) = shift₀ (rename ρ x₁) (rename (ext ρ) x₂)
+rename ρ (reset₀ x₁ x₂ x₃) = reset₀ (rename ρ x₁) (rename (ext ρ) x₂) (rename ρ x₃)
+
+exts :  Subst → Subst 
+exts ρ zero    = var zero
+exts ρ (suc x) = rename suc (ρ x)
+
+subst : Subst → (Expr -> Expr) 
+subst ρ (var x) = ρ x
+subst ρ (lam y) = lam (subst (exts ρ) y)
+subst ρ (app y y₁) = app (subst ρ y) (subst ρ y₁)
+subst ρ (new y) = new (subst (exts ρ) y)
+subst ρ (shift₀ y y₁) = shift₀ (subst ρ y)  (subst (exts ρ) y₁)
+subst ρ (reset₀ y y₁ y₂) = reset₀ (subst ρ y) (subst (exts ρ) y₁) (subst ρ y₂)
+
+subst-zero :  Expr  → Subst
+subst-zero e zero    = e
+subst-zero e (suc x) = var x
+
+infix 8 _[_]
+
+_[_] :  Expr -> Expr -> Expr
+M [ N ] = subst (subst-zero N) M
+
+
+
+_ : var zero [ lam (new (var zero)) ] ≡ lam (new (var zero))
+_ = refl
+_ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
+_ = refl
