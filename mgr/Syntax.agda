@@ -2,7 +2,7 @@ module mgr.Syntax where
 
 open import Data.Nat
 open import Data.List using (List;_∷_) renaming ([] to nil)
-open import Relation.Binary.PropositionalEquality using (_≡_;refl)
+open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 
 
 data Kind : Set where
@@ -127,7 +127,8 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
 
 
 data Value : Expr -> Set where
-    vlam : ∀ { e } → Value (lam e)
+    vlam   : ∀ { e } → Value (lam e)
+    vshift : ∀ { e e' } -> Value (shift₀ e' e)
 
 Rename = ℕ -> ℕ
 
@@ -172,3 +173,46 @@ _ : var zero [ lam (new (var zero)) ] ≡ lam (new (var zero))
 _ = refl
 _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
 _ = refl
+
+
+
+infix 2 _-→_
+
+data _-→_ : Expr -> Expr → Set where
+  
+ ξ-app₁ : ∀ {e e' e2}
+  → e -→ e'
+  → app e e2 -→ app e' e2
+  
+ ξ-app₂ : ∀ {V e2 e2'}
+  → Value V
+  → e2 -→ e2'
+  → app V e2 -→ app V e2'
+
+ ξ-new : ∀ {e e'}
+  → e -→ e'
+  → new e -→ new e'
+
+ β-lam-app : ∀ {e V}
+  → Value V
+  → app (lam e) V -→ e [ V ]
+
+ β-new : ∀ {V}
+  → Value V
+  → new V -→ V
+  
+ ξ-reset₀ : ∀ {e e' e'' en}
+  → e -→ e'
+  → reset₀ e en e'' -→ reset₀ e' en e''
+
+ β-reset₀-k : ∀ { e e' en}
+   → reset₀ (shift₀ e' e) en e' -→ en [ e ]
+  
+ β-reset₀-vl : ∀ {e e' en}
+   → Value (lam e)
+   → reset₀ (lam e) en e' -→ en [ (lam e) ]
+ 
+ β-reset₀-vk : ∀ {e e' e'' en}
+   → Value (shift₀ e'' e)
+   → e'' ≢ e' -- if labels differ, then shift is just normal passed value
+   → reset₀ (shift₀ e'' e) en e' -→ en [ (shift₀ e'' e) ]
