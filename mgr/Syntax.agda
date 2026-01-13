@@ -128,7 +128,8 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
 
 data Value : Expr -> Set where
     vlam   : ∀ { e } → Value (lam e)
-    vshift : ∀ { e e' } -> Value (shift₀ e' e)
+--    vvar : ∀ {n} → Value (var n)
+--    vshift : ∀ { e e' } -> Value (shift₀ e' e)
 
 Rename = ℕ -> ℕ
 
@@ -194,6 +195,7 @@ data _-→_ : Expr -> Expr → Set where
   → new e -→ new e'
 
  β-lam-app : ∀ {e V}
+  → Value (lam e)
   → Value V
   → app (lam e) V -→ e [ V ]
 
@@ -208,11 +210,42 @@ data _-→_ : Expr -> Expr → Set where
  β-reset₀-k : ∀ { e e' en}
    → reset₀ (shift₀ e' e) en e' -→ en [ e ]
   
- β-reset₀-vl : ∀ {e e' en}
-   → Value (lam e)
-   → reset₀ (lam e) en e' -→ en [ (lam e) ]
+ β-reset₀-vl : ∀ {v e' en}
+   → Value v
+   → reset₀ v en e' -→ en [ v ]
  
- β-reset₀-vk : ∀ {e e' e'' en}
-   → Value (shift₀ e'' e)
-   → e'' ≢ e' -- if labels differ, then shift is just normal passed value
-   → reset₀ (shift₀ e'' e) en e' -→ en [ (shift₀ e'' e) ]
+
+data Progress (E : Expr) : Set where
+ step : ∀ {E'}
+   → E -→ E'
+   → Progress E
+ done : Value E
+   → Progress E
+
+progress : ∀ {Δ Γ E A Eff}
+  → Δ , Γ ⊢ E ⦂ A / Eff
+-- I was hoping to prove something like this
+--  → ∅ , ∅ ⊢ E ⦂ A / nil
+-- but ⊢new requires larger Δ and Γ
+-- and ⊢shift₀ requires larger Eff
+  → Progress E
+progress  (⊢var {x = x₁ } x) = ?
+progress (⊢weak x x₁ x₂)  = progress x₂
+progress (⊢lam x) = done vlam
+progress (⊢app x x₁) with progress x 
+
+... | step (x1-→x2) = step  (ξ-app₁ x1-→x2)
+... | done vlam with progress x₁
+...     | step (y1-→y2) = step (ξ-app₂ vlam y1-→y2)
+...     | done v2 = step ( (β-lam-app vlam v2) )
+
+progress (⊢forall x) = progress x
+progress (⊢new x) with progress x
+... | step (x1-→x2) = step (ξ-new x1-→x2)
+... | done v = step (β-new v)
+progress (⊢reset₀ x x₁ x₂) with progress x₁
+... | step (x1-→x2) = step (ξ-reset₀ x1-→x2)
+... | done v = step (β-reset₀-vl  v)
+
+progress (⊢shift₀ x x₁) = ?
+
