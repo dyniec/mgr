@@ -12,6 +12,29 @@ data Value : Expr -> Set where
 --    vvar : ∀ {n} → Value (var n)
 --    vshift : ∀ { e e' } -> Value (shift₀ e' e)
 
+data Frame  : Set where
+  fempty : Frame
+  fapp₁ : Frame → ( e : Expr ) → Frame
+  fapp₂ : (e : Expr) →  (v : Value e) -> Frame  -> Frame
+  fnew :   Frame → Frame
+  freset₀ : Frame → (en : Expr) → (e' : Expr) -> Frame
+
+{- typed frames
+data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects →   Set where
+  fempty : Frame Δ Γ T Eff T Eff
+  fapp₁ : ∀ {A B E } → {  e : Expr } → { Δ , Γ ⊢ e ⦂ A / E  } → Frame Δ Γ T Eff (A - E > B) E → Frame Δ Γ T Eff B E
+  fapp₂ : ∀ {A B E} → {e : Expr} → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - E > B) / E } -> Frame Δ Γ T Eff A E  -> Frame Δ Γ T Eff B E
+  fnew : ∀ {A E} →  Frame Δ Γ T Eff A E → Frame Δ Γ T Eff A E
+  freset₀ :
+-}
+
+plug : Frame → Expr → Expr
+plug fempty e = e
+plug (fapp₁ f e₁) e =  app (plug f e) e₁
+plug (fapp₂ e₁ v f) e =  app e₁ (plug f e)
+plug (fnew f) e =  new (plug f e)
+plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
+
 Rename = ℕ -> ℕ
 
 Subst = ℕ -> Expr
