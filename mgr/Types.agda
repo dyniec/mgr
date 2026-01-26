@@ -1,14 +1,13 @@
 module mgr.Types where
 
-open import mgr.Syntax
 open import Data.Nat
-open import Data.List using (List;_∷_) renaming ([] to nil)
+open import Data.List using (List;_∷_;map) renaming ([] to nil)
 
 
 data Kind : Set where
     T : Kind
     E : Kind
--- uhh both variables and type variables are deBruijn indexed
+ 
 Id : Set
 Id = ℕ
 
@@ -21,6 +20,43 @@ data Type : Set where
     _-_>_ : Type → Effects → Type → Type
     forallt : Kind → Type →  Type
     L_at_/_ : ℕ → Type → Effects → Type
+
+data Expr : Set where
+    var : ℕ → Expr
+    lam : Expr → Expr
+    app : Expr → Expr → Expr
+    tlam : Kind → Expr → Expr
+    tapp : Expr -> Type -> Expr
+    new : Expr → Expr
+    shift₀ : Expr → Expr → Expr
+    reset₀ : Expr → Expr → Expr → Expr
+
+Rename = ℕ → ℕ
+Subst = ℕ → Type
+ext : Rename → Rename
+ext ρ zero = zero
+ext ρ (suc x) = suc (ρ x)
+
+rename : Rename → (Type → Type)
+rename ρ (ttv x) = ttv (ρ x)
+rename ρ (x - effs > x₁) = rename ρ x -  map ρ effs > rename ρ x₁
+rename ρ (forallt k x) = forallt k (rename (ext ρ) x)
+rename ρ (L x at x₁ / effs) =  L   ρ x at  rename ρ x₁ /   effs
+
+exts : Subst → Subst
+exts ρ zero = ttv zero
+exts ρ (suc x) = rename suc (ρ x)
+subst : Subst → ( Type → Type)
+--not really ok because type vars in effects and labels are not replaced correctly
+-- they would need to be proper Type(likes)
+subst ρ (ttv x) = ρ x
+subst ρ (t - x > t₁) =  subst ρ t -  x > subst ρ t₁
+subst ρ (forallt k t) = forallt k (subst (exts ρ) t)
+subst ρ (L x at t / x₁) = L x at subst ρ t  /  x₁ 
+
+subst-zero : Type → Subst
+subst-zero t zero = t
+subst-zero t (suc x) = ttv x
 
 infixl 5  _,_
 data Context : Set where
@@ -81,11 +117,11 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Γ ∋ x ⦂ A
         → Δ , Γ ⊢ var x ⦂ A / E
     
-    ⊢weak : ∀ {Γ Δ e A A' E E'}
-        → Δ ⊢  A <t⦂ A'
-        → Δ ⊢  E <⦂ E'
-        → Δ , Γ ⊢ e ⦂ A / E
-        → Δ , Γ ⊢ e ⦂ A' / E'
+--    ⊢weak : ∀ {Γ Δ e A A' E E'}
+--        → Δ ⊢  A <t⦂ A'
+--        → Δ ⊢  E <⦂ E'
+--        → Δ , Γ ⊢ e ⦂ A / E
+--        → Δ , Γ ⊢ e ⦂ A' / E'
     
     ⊢lam : ∀ {Γ Δ e A B E}
         → Δ , (Γ , A) ⊢ e ⦂ B / E
@@ -98,8 +134,13 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
 
     ⊢forall : ∀ {Γ Δ e k A}
         → (Δ , k) , Γ  ⊢ e ⦂ A / nil
-        → Δ , Γ ⊢ e ⦂ forallt k A / nil
-        
+        → Δ , Γ ⊢ tlam k e ⦂ forallt k A / nil
+
+    {- ⊢tapp : ∀ {Γ Δ e k A T}
+      → -- T is well formed in Δ
+      → Δ , Γ ⊢ e ⦂ forall k A /E
+      → (Δ , k) , Γ ⊢ e ⦂ A[T] / E[T]
+     -}
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
         → (Δ , Kind.E) , (Γ , (L zero at A1 / E1))  ⊢ e ⦂ A / E
@@ -115,4 +156,6 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ   ⊢ e ⦂ A / (n ∷ E')
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
-
+        
+--    ⊢label : ∀ {Γ Δ n n' A E}
+--      → Γ , Δ ⊢ label n ⦂ (L n' at A / E) / nil 

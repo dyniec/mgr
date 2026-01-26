@@ -1,49 +1,21 @@
 module mgr.Progress where
 
-open import mgr.Syntax
-open import mgr.Types
+
+open import mgr.Types hiding (Rename;Subst;ext;rename;exts;subst;subst-zero)
 
 open import Data.Nat
 open import Data.List using (List;_∷_) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 
-data Value : Expr -> Set where
-    vlam   : ∀ { e } → Value (lam e)
---    vvar : ∀ {n} → Value (var n)
---    vshift : ∀ { e e' } -> Value (shift₀ e' e)
+Rename = ℕ → ℕ
 
-data Frame  : Set where
-  fempty : Frame
-  fapp₁ : Frame → ( e : Expr ) → Frame
-  fapp₂ : (e : Expr) →  (v : Value e) -> Frame  -> Frame
-  fnew :   Frame → Frame
-  freset₀ : Frame → (en : Expr) → (e' : Expr) -> Frame
-
-{- typed frames
-data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects →   Set where
-  fempty : Frame Δ Γ T Eff T Eff
-  fapp₁ : ∀ {A B E } → {  e : Expr } → { Δ , Γ ⊢ e ⦂ A / E  } → Frame Δ Γ T Eff (A - E > B) E → Frame Δ Γ T Eff B E
-  fapp₂ : ∀ {A B E} → {e : Expr} → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - E > B) / E } -> Frame Δ Γ T Eff A E  -> Frame Δ Γ T Eff B E
-  fnew : ∀ {A E} →  Frame Δ Γ T Eff A E → Frame Δ Γ T Eff A E
-  freset₀ :
--}
-
-plug : Frame → Expr → Expr
-plug fempty e = e
-plug (fapp₁ f e₁) e =  app (plug f e) e₁
-plug (fapp₂ e₁ v f) e =  app e₁ (plug f e)
-plug (fnew f) e =  new (plug f e)
-plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
-
-Rename = ℕ -> ℕ
-
-Subst = ℕ -> Expr
+Subst = ℕ → Expr
 
 ext : Rename → Rename 
 ext ρ zero    = zero
 ext ρ (suc x) = suc (ρ x)
 
-rename : Rename → (Expr -> Expr)
+rename : Rename → (Expr → Expr)
 rename ρ (var x₁) = var (ρ x₁)
 rename ρ (lam x₁) = lam (rename (ext ρ) x₁)
 rename ρ (app x₁ x₂) = app (rename ρ x₁) (rename ρ x₂)
@@ -80,6 +52,36 @@ _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
 _ = refl
 
 
+
+data Value : Expr -> Set where
+    vlam : ∀ { e } → Value (lam e)
+    vLam : ∀ { k e } → Value (tlam k e)
+--    llab : ∀ { n } → Value (label n)  
+--    vvar : ∀ {n} → Value (var n)
+--    vshift : ∀ { e e' } -> Value (shift₀ e' e)
+
+data Frame  : Set where
+  fempty : Frame
+  fapp₁ : Frame → ( e : Expr ) → Frame
+  fapp₂ : (e : Expr) →  (v : Value e) -> Frame  -> Frame
+  fnew :   Frame → Frame
+  freset₀ : Frame → (en : Expr) → (e' : Expr) -> Frame
+
+{- typed frames
+data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects →   Set where
+  fempty : Frame Δ Γ T Eff T Eff
+  fapp₁ : ∀ {A B E } → {  e : Expr } → { Δ , Γ ⊢ e ⦂ A / E  } → Frame Δ Γ T Eff (A - E > B) E → Frame Δ Γ T Eff B E
+  fapp₂ : ∀ {A B E} → {e : Expr} → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - E > B) / E } -> Frame Δ Γ T Eff A E  -> Frame Δ Γ T Eff B E
+  fnew : ∀ {A E} →  Frame Δ Γ T Eff A E → Frame Δ Γ T Eff A E
+  freset₀ :
+-}
+
+plug : Frame → Expr → Expr
+plug fempty e = e
+plug (fapp₁ f e₁) e =  app (plug f e) e₁
+plug (fapp₂ e₁ v f) e =  app e₁ (plug f e)
+plug (fnew f) e =  new (plug f e)
+plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
 
 infix 2 _-→_
 
@@ -127,23 +129,22 @@ data Progress (E : Expr) : Set where
    → Progress E
 
 progress : ∀ {Δ Γ E A Eff}
-  → Δ , Γ ⊢ E ⦂ A / Eff
+--  → Δ , Γ ⊢ E ⦂ A / Eff
 -- I was hoping to prove something like this
---  → ∅ , ∅ ⊢ E ⦂ A / nil
+  → ∅ , ∅ ⊢ E ⦂ A / nil
 -- but ⊢new requires larger Δ and Γ
 -- and ⊢shift₀ requires larger Eff
   → Progress E
 progress  (⊢var {x = x₁ } x) = {!!}
-progress (⊢weak x x₁ x₂)  = progress x₂
+--progress (⊢weak x x₁ x₂)  = progress x₂
 progress (⊢lam x) = done vlam
 progress (⊢app x x₁) with progress x 
-
 ... | step (x1-→x2) = step  (ξ-app₁ x1-→x2)
 ... | done vlam with progress x₁
 ...     | step (y1-→y2) = step (ξ-app₂ vlam y1-→y2)
 ...     | done v2 = step ( (β-lam-app vlam v2) )
 
-progress (⊢forall x) = progress x
+progress (⊢forall x) = done vLam
 progress (⊢new x) with progress x
 ... | step (x1-→x2) = step (ξ-new x1-→x2)
 ... | done v = step (β-new v)
