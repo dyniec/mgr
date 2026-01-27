@@ -2,6 +2,7 @@ module mgr.Types where
 
 open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
+open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 
 
 data Kind : Set where
@@ -11,15 +12,14 @@ data Kind : Set where
 Id : Set
 Id = ℕ
 
-Effect = ℕ
-
-Effects = List Effect
-
-data Type : Set where
-    ttv : ℕ → Type
+data Type : Set
+Effects : Set
+data Type  where
+    ttv : Id → Type
     _-_>_ : Type → Effects → Type → Type
     forallt : Kind → Type →  Type
-    L_at_/_ : ℕ → Type → Effects → Type
+    L_at_/_ : Type → Type → Effects → Type
+Effects = List Type
 
 data Expr : Set where
     var : ℕ → Expr
@@ -38,26 +38,35 @@ ext ρ zero = zero
 ext ρ (suc x) = suc (ρ x)
 
 rename : Rename → (Type → Type)
+rename' : Rename → (Effects → Effects)
 rename ρ (ttv x) = ttv (ρ x)
-rename ρ (x - effs > x₁) = rename ρ x -  map ρ effs > rename ρ x₁
+rename ρ (x - effs > x₁) = rename ρ x -  rename' ρ effs > rename ρ x₁
 rename ρ (forallt k x) = forallt k (rename (ext ρ) x)
-rename ρ (L x at x₁ / effs) =  L   ρ x at  rename ρ x₁ /   effs
+rename ρ (L x at x₁ / effs) =  L  rename ρ x at  rename ρ x₁ / rename' ρ effs
+-- doing mutal recursion because I couldn't convice termination checker that calling map is productive
+rename' ρ nil = nil
+rename' ρ (x ∷ xs) = rename ρ x ∷ rename' ρ xs
 
 exts : Subst → Subst
 exts ρ zero = ttv zero
 exts ρ (suc x) = rename suc (ρ x)
+
 subst : Subst → ( Type → Type)
---not really ok because type vars in effects and labels are not replaced correctly
--- they would need to be proper Type(likes)
+subst' : Subst → ( Effects → Effects)
 subst ρ (ttv x) = ρ x
-subst ρ (t - x > t₁) =  subst ρ t -  x > subst ρ t₁
+subst ρ (t - x > t₁) =  subst ρ t - subst' ρ x > subst ρ t₁
 subst ρ (forallt k t) = forallt k (subst (exts ρ) t)
-subst ρ (L x at t / x₁) = L x at subst ρ t  /  x₁ 
+subst ρ (L x at t / x₁) = L subst ρ x at subst ρ t / subst' ρ x₁
+subst' ρ nil = nil
+subst' ρ (x ∷ x₁) = subst ρ x ∷ subst' ρ x₁
 
 subst-zero : Type → Subst
 subst-zero t zero = t
 subst-zero t (suc x) = ttv x
 
+infix 8 _[_]
+_[_] : Type → Type → Type
+M [ N ] = subst (subst-zero N) M
 infixl 5  _,_
 data Context : Set where
     ∅ : Context
@@ -74,6 +83,9 @@ data _⊢_<⦂_ : TContext → Effects → Effects → Set where
   S : ∀ {Δ e E1 E2 }
     → Δ ⊢ E1 <⦂ E2
     → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+
+nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
+nil<⦂⊥ Z = refl
 
 data _⊢_<t⦂_ : TContext → Type → Type → Set where
 
@@ -117,11 +129,11 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Γ ∋ x ⦂ A
         → Δ , Γ ⊢ var x ⦂ A / E
     
---    ⊢weak : ∀ {Γ Δ e A A' E E'}
---        → Δ ⊢  A <t⦂ A'
---        → Δ ⊢  E <⦂ E'
---        → Δ , Γ ⊢ e ⦂ A / E
---        → Δ , Γ ⊢ e ⦂ A' / E'
+    ⊢weak : ∀ {Γ Δ e A A' E E'}
+        → Δ ⊢  A <t⦂ A'
+        → Δ ⊢  E <⦂ E'
+        → Δ , Γ ⊢ e ⦂ A / E
+        → Δ , Γ ⊢ e ⦂ A' / E'
     
     ⊢lam : ∀ {Γ Δ e A B E}
         → Δ , (Γ , A) ⊢ e ⦂ B / E
@@ -139,21 +151,21 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
     {- ⊢tapp : ∀ {Γ Δ e k A T}
       → -- T is well formed in Δ
       → Δ , Γ ⊢ e ⦂ forall k A /E
-      → (Δ , k) , Γ ⊢ e ⦂ A[T] / E[T]
+      → (Δ , k) , Γ ⊢ e[T] ⦂ A[T] / E[T]
      -}
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
-        → (Δ , Kind.E) , (Γ , (L zero at A1 / E1))  ⊢ e ⦂ A / E
+        → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ A / E
         → Δ , Γ ⊢ new e ⦂ A / E
 
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
-        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / nil 
+        → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
-        → Δ , Γ ⊢ shift₀ e' e ⦂ A / (n ∷ nil)
+        → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
     ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
-        → Δ , Γ ⊢ e' ⦂ (L n at  A' / E') / nil 
-        → Δ , Γ   ⊢ e ⦂ A / (n ∷ E')
+        → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+        → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         

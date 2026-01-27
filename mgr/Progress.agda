@@ -1,7 +1,7 @@
 module mgr.Progress where
 
 
-open import mgr.Types hiding (Rename;Subst;ext;rename;exts;subst;subst-zero)
+open import mgr.Types hiding (Rename;Subst;ext;rename;exts;subst;subst-zero;_[_])
 
 open import Data.Nat
 open import Data.List using (List;_∷_) renaming ([] to nil)
@@ -129,14 +129,11 @@ data Progress (E : Expr) : Set where
    → Progress E
 
 progress : ∀ {Δ Γ E A Eff}
---  → Δ , Γ ⊢ E ⦂ A / Eff
--- I was hoping to prove something like this
   → ∅ , ∅ ⊢ E ⦂ A / nil
--- but ⊢new requires larger Δ and Γ
--- and ⊢shift₀ requires larger Eff
   → Progress E
 progress  (⊢var {x = x₁ } x) = {!!}
---progress (⊢weak x x₁ x₂)  = progress x₂
+progress (⊢weak x x₁ x₂) with nil<⦂⊥ x₁
+... | refl = progress x₂
 progress (⊢lam x) = done vlam
 progress (⊢app x x₁) with progress x 
 ... | step (x1-→x2) = step  (ξ-app₁ x1-→x2)
