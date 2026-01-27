@@ -76,27 +76,6 @@ data TContext : Set where
     ∅ : TContext
     _,_ : TContext → Kind → TContext
 
-
-data _⊢_<⦂_ : TContext → Effects → Effects → Set where
-  Z : ∀ {Δ E}
-    → Δ ⊢ nil <⦂ E 
-  S : ∀ {Δ e E1 E2 }
-    → Δ ⊢ E1 <⦂ E2
-    → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
-
-nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
-nil<⦂⊥ Z = refl
-
-data _⊢_<t⦂_ : TContext → Type → Type → Set where
-
-    <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
-
-    <⦂→ : ∀ {Δ A1 A2 B1 B2 E1 E2} 
-        → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ A1 <t⦂ A2
-        → Δ ⊢ B1 <t⦂ B2 
-        → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
-
 infix  4  _∋_⦂_
 
 data _∋_⦂_ : Context → Id → Type → Set where
@@ -123,13 +102,72 @@ data _∋t_⦂_ : TContext → Id → Kind → Set where
     → Δ ∋t x ⦂ k
     → (Δ , y)  ∋t (suc x) ⦂ k
 
+data _⊢_⦂e : TContext → Type → Set where
+  ⊢ttv : ∀ {Δ n}
+    → Δ ∋t n ⦂ E
+    → Δ ⊢ ttv n ⦂e 
+data _⊢_⦂t : TContext → Type → Set
+data _⊢_⦂effs : TContext → Effects → Set
+data _⊢_⦂t where
+  ⊢ttv : ∀ {Δ n }
+    → Δ ∋t n ⦂ T 
+    → Δ ⊢ ttv n ⦂t
+  ⊢-> : ∀ {Δ t1 effs t2}
+    → Δ ⊢ t1 ⦂t 
+    → Δ ⊢ effs ⦂effs
+    → Δ ⊢ t2 ⦂t 
+    → Δ ⊢ t1 - effs > t1 ⦂t 
+  ⊢forall : ∀ {Δ k t}
+    → (Δ , k) ⊢ t ⦂t 
+    → Δ ⊢ forallt k t ⦂t
+  ⊢label : ∀ {Δ e t effs}
+    → Δ ⊢ e ⦂e
+    → Δ ⊢ t ⦂t
+    → Δ ⊢ effs ⦂effs
+    → Δ ⊢ L e at t / effs ⦂t 
+data _⊢_⦂effs where
+  ⊢nil : ∀ {Δ}
+    → Δ ⊢ nil ⦂effs
+  ⊢cons : ∀ {Δ e effs}
+    → Δ ⊢ e ⦂e 
+    → Δ ⊢ effs ⦂effs
+    → Δ ⊢ e ∷ effs ⦂effs
+
+
+
+data _⊢_<⦂_ : TContext → Effects → Effects → Set where
+  Z : ∀ {Δ E}
+    → Δ ⊢ E ⦂effs
+    → Δ ⊢ nil <⦂ E 
+  S : ∀ {Δ e E1 E2 }
+    → Δ ⊢ E1 <⦂ E2
+    → Δ ⊢ e ⦂e
+    → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+
+nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
+nil<⦂⊥ (Z _) = refl
+
+data _⊢_<t⦂_ : TContext → Type → Type → Set where
+
+    <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
+
+    <⦂→ : ∀ {Δ A1 A2 B1 B2 E1 E2} 
+        → Δ ⊢ E1 <⦂ E2
+        → Δ ⊢ A1 <t⦂ A2
+        → Δ ⊢ B1 <t⦂ B2 
+        → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
+
+
 data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
 
     ⊢var : ∀ {Γ Δ x A E}
         → Γ ∋ x ⦂ A
+        → Δ ⊢ E ⦂effs
         → Δ , Γ ⊢ var x ⦂ A / E
     
     ⊢weak : ∀ {Γ Δ e A A' E E'}
+        → Δ ⊢ E ⦂effs
+        → Δ ⊢ E' ⦂effs
         → Δ ⊢  A <t⦂ A'
         → Δ ⊢  E <⦂ E'
         → Δ , Γ ⊢ e ⦂ A / E
@@ -144,19 +182,19 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ e2 ⦂ A / E
         → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
 
-    ⊢forall : ∀ {Γ Δ e k A}
-        → (Δ , k) , Γ  ⊢ e ⦂ A / nil
-        → Δ , Γ ⊢ tlam k e ⦂ forallt k A / nil
+    ⊢forall : ∀ {Γ Δ e k A E}
+        → (Δ , k) , Γ  ⊢ e ⦂ A / E
+        → Δ , Γ ⊢ tlam k e ⦂ forallt k (rename suc A) / map (rename suc) E
 
     {- ⊢tapp : ∀ {Γ Δ e k A T}
-      → -- T is well formed in Δ
+      → Δ ⊢ T ⦂t 
       → Δ , Γ ⊢ e ⦂ forall k A /E
       → (Δ , k) , Γ ⊢ e[T] ⦂ A[T] / E[T]
      -}
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
         → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ A / E
-        → Δ , Γ ⊢ new e ⦂ A / E
+        → Δ , Γ ⊢ new e ⦂ (rename suc A) / map (rename suc) E
 
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
         → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 

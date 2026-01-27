@@ -131,8 +131,8 @@ data Progress (E : Expr) : Set where
 progress : ∀ {Δ Γ E A Eff}
   → ∅ , ∅ ⊢ E ⦂ A / nil
   → Progress E
-progress  (⊢var {x = x₁ } x) = {!!}
-progress (⊢weak x x₁ x₂) with nil<⦂⊥ x₁
+progress  (⊢var {x = x₁ } x _) = {!!}
+progress (⊢weak _ x x₁ x₂) with nil<⦂⊥ x₁
 ... | refl = progress x₂
 progress (⊢lam x) = done vlam
 progress (⊢app x x₁) with progress x 
