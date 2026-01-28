@@ -166,7 +166,6 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ var x ⦂ A / E
     
     ⊢weak : ∀ {Γ Δ e A A' E E'}
-        → Δ ⊢ E ⦂effs
         → Δ ⊢ E' ⦂effs
         → Δ ⊢  A <t⦂ A'
         → Δ ⊢  E <⦂ E'
@@ -183,8 +182,8 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
 
     ⊢forall : ∀ {Γ Δ e k A E}
-        → (Δ , k) , Γ  ⊢ e ⦂ A / E
-        → Δ , Γ ⊢ tlam k e ⦂ forallt k (rename suc A) / map (rename suc) E
+        → (Δ , k) , Γ  ⊢ e ⦂ rename suc A / map (rename suc) E
+        → Δ , Γ ⊢ tlam k e ⦂ forallt k A / E
 
     {- ⊢tapp : ∀ {Γ Δ e k A T}
       → Δ ⊢ T ⦂t 
@@ -193,15 +192,17 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
      -}
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
-        → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ A / E
-        → Δ , Γ ⊢ new e ⦂ (rename suc A) / map (rename suc) E
+        → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ rename suc A / map (rename suc) E
+        → Δ , Γ ⊢ new e ⦂ A / E
 
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
+        → Δ ⊢ ttv n ⦂e
         → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
         → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
     ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
+        → Δ ⊢ ttv n ⦂e
         → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
