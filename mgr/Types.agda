@@ -157,6 +157,10 @@ data _⊢_<t⦂_ : TContext → Type → Type → Set where
         → Δ ⊢ B1 <t⦂ B2 
         → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
 
+    <⦂forall : ∀ {Δ A1 A2 k}
+        → (Δ , k) ⊢ A1 <t⦂ A2
+        → Δ ⊢ forallt k A1 <t⦂ forallt k A2
+
 
 data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
 
