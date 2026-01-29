@@ -6,6 +6,7 @@ open import mgr.Types hiding (Rename;Subst;ext;rename;exts;subst;subst-zero;_[_]
 open import Data.Nat
 open import Data.List using (List;_∷_) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
+open import Data.Product using (_×_;_,′_)
 
 Rename = ℕ → ℕ
 
@@ -24,6 +25,7 @@ rename ρ (tapp x₁ x₂) = tapp (rename ρ x₁)  x₂
 rename ρ (new x₁) = new (rename (ext ρ) x₁)
 rename ρ (shift₀ x₁ x₂) = shift₀ (rename ρ x₁) (rename (ext ρ) x₂)
 rename ρ (reset₀ x₁ x₂ x₃) = reset₀ (rename ρ x₁) (rename (ext ρ) x₂) (rename ρ x₃)
+rename ρ (label n) = label n
 
 exts :  Subst → Subst 
 exts ρ zero    = var zero
@@ -38,6 +40,7 @@ subst ρ (tapp x₁ x₂) = tapp (subst ρ x₁) x₂
 subst ρ (new y) = new (subst (exts ρ) y)
 subst ρ (shift₀ y y₁) = shift₀ (subst ρ y)  (subst (exts ρ) y₁)
 subst ρ (reset₀ y y₁ y₂) = reset₀ (subst ρ y) (subst (exts ρ) y₁) (subst ρ y₂)
+subst ρ (label n) = label n
 
 subst-zero :  Expr  → Subst
 subst-zero e zero    = e
@@ -60,7 +63,7 @@ _ = refl
 data Value : Expr -> Set where
     vlam : ∀ { e } → Value (lam e)
     vLam : ∀ { k e } → Value (tlam k e)
---    llab : ∀ { n } → Value (label n)  
+    llab : ∀ { n } → Value (label n)
 --    vvar : ∀ {n} → Value (var n)
 --    vshift : ∀ { e e' } -> Value (shift₀ e' e)
 
@@ -68,7 +71,6 @@ data Frame  : Set where
   fempty : Frame
   fapp₁ : Frame → ( e : Expr ) → Frame
   fapp₂ : (e : Expr) →  (v : Value e) -> Frame  -> Frame
-  fnew :   Frame → Frame
   freset₀ : Frame → (en : Expr) → (e' : Expr) -> Frame
 
 {- typed frames
@@ -76,7 +78,6 @@ data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → 
   fempty : Frame Δ Γ T Eff T Eff
   fapp₁ : ∀ {A B E } → {  e : Expr } → { Δ , Γ ⊢ e ⦂ A / E  } → Frame Δ Γ T Eff (A - E > B) E → Frame Δ Γ T Eff B E
   fapp₂ : ∀ {A B E} → {e : Expr} → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - E > B) / E } -> Frame Δ Γ T Eff A E  -> Frame Δ Γ T Eff B E
-  fnew : ∀ {A E} →  Frame Δ Γ T Eff A E → Frame Δ Γ T Eff A E
   freset₀ :
 -}
 
@@ -84,47 +85,42 @@ plug : Frame → Expr → Expr
 plug fempty e = e
 plug (fapp₁ f e₁) e =  app (plug f e) e₁
 plug (fapp₂ e₁ v f) e =  app e₁ (plug f e)
-plug (fnew f) e =  new (plug f e)
 plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
 
-infix 2 _-→_
-
-data _-→_ : Expr -> Expr → Set where
+infix 2 _↦_
+State = ℕ
+data _↦_ : Expr × State → Expr × State → Set where
+--only redexes
   
- ξ-app₁ : ∀ {e e' e2}
-  → e -→ e'
-  → app e e2 -→ app e' e2
-  
- ξ-app₂ : ∀ {V e2 e2'}
-  → Value V
-  → e2 -→ e2'
-  → app V e2 -→ app V e2'
+ ↦new : ∀ {e s}
+  → new e ,′ s  ↦ e [ label s ] ,′ suc s
 
- ξ-new : ∀ {e e'}
-  → e -→ e'
-  → new e -→ new e'
-
- β-lam-app : ∀ {e V}
+ β-lam-app : ∀ {e V s}
   → Value (lam e)
   → Value V
-  → app (lam e) V -→ e [ V ]
+  → app (lam e) V ,′ s ↦ e [ V ] ,′ s
 
- β-new : ∀ {V}
-  → Value V
-  → new V -→ V
-  
- ξ-reset₀ : ∀ {e e' e'' en}
-  → e -→ e'
-  → reset₀ e en e'' -→ reset₀ e' en e''
+ β-tlam-tapp : ∀ {k e T s}
+   → Value (tlam k e)
+   → tapp (tlam k e) T ,′ s ↦ e e[t T ]  ,′ s
 
- β-reset₀-k : ∀ { e e' en}
-   → reset₀ (shift₀ e' e) en e' -→ en [ e ]
-  
- β-reset₀-vl : ∀ {v e' en}
+
+ β-reset₀-vl : ∀ {v e' en s}
    → Value v
-   → reset₀ v en e' -→ en [ v ]
- 
+   → reset₀ v en e' ,′ s ↦ en [ v ] ,′ s
 
+ Β-reset₀-k : ∀ {f es en e' e s}
+   → (plug f (shift₀ e' es)) ≡ e
+   → reset₀ e en e' ,′ s ↦ es [ lam (reset₀ (plug f (var 0)) en e')  ]  ,′ s
+infix 2 _-→_
+data _-→_ : Expr × State → Expr × State → Set where
+  -→frame : ∀ {f e1 e1' e2 e2' s s' }
+    → e1' ,′ s ↦ e2' ,′ s'
+    → plug f e1' ≡ e1
+    → plug f e2' ≡ e2
+    →  (e1 ,′ s) -→ (e2 ,′ s')
+
+{-
 data Progress (E : Expr) : Set where
  step : ∀ {E'}
    → E -→ E'
@@ -149,8 +145,9 @@ progress (⊢forall x) = done vLam
 --progress (⊢new x) with progress x
 --... | step (x1-→x2) = step (ξ-new x1-→x2)
 --... | done v = step (β-new v)
-progress (⊢reset₀ x x₁ x₂) with progress x₁
+progress (⊢reset₀ _ x x₁ x₂) with progress x₁
 ... | step (x1-→x2) = step (ξ-reset₀ x1-→x2)
 ... | done v = step (β-reset₀-vl  v)
 
 progress (⊢shift₀ x x₁) = {! progress x!}
+-}

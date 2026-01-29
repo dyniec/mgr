@@ -29,6 +29,7 @@ data Expr : Set where
     new : Expr → Expr
     shift₀ : Expr → Expr → Expr
     reset₀ : Expr → Expr → Expr → Expr
+    label : ℕ → Expr
 
 Rename = ℕ → ℕ
 Subst = ℕ → Type
@@ -72,6 +73,7 @@ subst-in-expr ρ (lam e) =  lam (subst-in-expr ρ e)
 subst-in-expr ρ (app e e₁) =  app (subst-in-expr ρ e) (subst-in-expr ρ e₁)
 subst-in-expr ρ (shift₀ e e₁) =  shift₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁)
 subst-in-expr ρ (reset₀ e e₁ e₂) = reset₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁) (subst-in-expr ρ e₂)
+subst-in-expr ρ (label n) = label n
 
 infix 8 _[_]
 _[_] : Type → Type → Type
@@ -226,5 +228,7 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
---    ⊢label : ∀ {Γ Δ n n' A E}
---      → Γ , Δ ⊢ label n ⦂ (L n' at A / E) / nil 
+    ⊢label : ∀ {Γ Δ n n' A E}
+      → Δ ⊢ A ⦂t
+      → Δ ⊢ E ⦂effs
+      → Δ , Γ ⊢ label n ⦂ (L n' at A / E) / nil 
