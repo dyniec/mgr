@@ -19,6 +19,8 @@ rename : Rename → (Expr → Expr)
 rename ρ (var x₁) = var (ρ x₁)
 rename ρ (lam x₁) = lam (rename (ext ρ) x₁)
 rename ρ (app x₁ x₂) = app (rename ρ x₁) (rename ρ x₂)
+rename ρ (tlam k x) = tlam k (rename ρ x)
+rename ρ (tapp x₁ x₂) = tapp (rename ρ x₁)  x₂
 rename ρ (new x₁) = new (rename (ext ρ) x₁)
 rename ρ (shift₀ x₁ x₂) = shift₀ (rename ρ x₁) (rename (ext ρ) x₂)
 rename ρ (reset₀ x₁ x₂ x₃) = reset₀ (rename ρ x₁) (rename (ext ρ) x₂) (rename ρ x₃)
@@ -31,6 +33,8 @@ subst : Subst → (Expr -> Expr)
 subst ρ (var x) = ρ x
 subst ρ (lam y) = lam (subst (exts ρ) y)
 subst ρ (app y y₁) = app (subst ρ y) (subst ρ y₁)
+subst ρ (tlam k x) = tlam k (subst ρ x)
+subst ρ (tapp x₁ x₂) = tapp (subst ρ x₁) x₂
 subst ρ (new y) = new (subst (exts ρ) y)
 subst ρ (shift₀ y y₁) = shift₀ (subst ρ y)  (subst (exts ρ) y₁)
 subst ρ (reset₀ y y₁ y₂) = reset₀ (subst ρ y) (subst (exts ρ) y₁) (subst ρ y₂)
@@ -142,9 +146,9 @@ progress (⊢app x x₁) with progress x
 ...     | done v2 = step ( (β-lam-app vlam v2) )
 
 progress (⊢forall x) = done vLam
-progress (⊢new x) with progress x
-... | step (x1-→x2) = step (ξ-new x1-→x2)
-... | done v = step (β-new v)
+--progress (⊢new x) with progress x
+--... | step (x1-→x2) = step (ξ-new x1-→x2)
+--... | done v = step (β-new v)
 progress (⊢reset₀ x x₁ x₂) with progress x₁
 ... | step (x1-→x2) = step (ξ-reset₀ x1-→x2)
 ... | done v = step (β-reset₀-vl  v)
