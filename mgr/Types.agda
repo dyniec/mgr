@@ -7,8 +7,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 
 data Kind : Set where
     T : Kind
-    E : Kind
- 
+    E : Kind 
 Id : Set
 Id = ℕ
 
@@ -64,9 +63,25 @@ subst-zero : Type → Subst
 subst-zero t zero = t
 subst-zero t (suc x) = ttv x
 
+subst-in-expr : Subst → Expr → Expr
+subst-in-expr ρ (tlam k e) = tlam k (subst-in-expr (exts ρ) e)
+subst-in-expr ρ (new e) =  new (subst-in-expr (exts ρ) e)
+subst-in-expr ρ (tapp e t) = tapp e (subst ρ t)
+subst-in-expr ρ (var x) = var x
+subst-in-expr ρ (lam e) =  lam (subst-in-expr ρ e)
+subst-in-expr ρ (app e e₁) =  app (subst-in-expr ρ e) (subst-in-expr ρ e₁)
+subst-in-expr ρ (shift₀ e e₁) =  shift₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁)
+subst-in-expr ρ (reset₀ e e₁ e₂) = reset₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁) (subst-in-expr ρ e₂)
+
 infix 8 _[_]
 _[_] : Type → Type → Type
 M [ N ] = subst (subst-zero N) M
+_e[t_] : Expr → Type → Expr
+M e[t t ] = subst-in-expr (subst-zero t) M
+_effs[t_] : Effects → Type → Effects
+nil effs[t t ] = nil
+(x ∷ xs) effs[t t ] = (x [ t ])∷ xs effs[t t ]
+
 infixl 5  _,_
 data Context : Set where
     ∅ : Context
@@ -189,11 +204,10 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → (Δ , k) , Γ  ⊢ e ⦂ rename suc A / map (rename suc) E
         → Δ , Γ ⊢ tlam k e ⦂ forallt k A / E
 
-    {- ⊢tapp : ∀ {Γ Δ e k A T}
-      → Δ ⊢ T ⦂t 
-      → Δ , Γ ⊢ e ⦂ forall k A /E
-      → (Δ , k) , Γ ⊢ e[T] ⦂ A[T] / E[T]
-     -}
+    ⊢tapp : ∀ {Γ Δ e k A T E}
+        → Δ ⊢ T ⦂t
+        → Δ , Γ ⊢ e ⦂ forallt k A / E
+        → (Δ , k) , Γ ⊢ tapp e T ⦂ A [ T ] / (E effs[t T ])
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
         → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ rename suc A / map (rename suc) E
