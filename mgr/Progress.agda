@@ -63,7 +63,7 @@ _ = refl
 data Value : Expr -> Set where
     vlam : ∀ { e } → Value (lam e)
     vLam : ∀ { k e } → Value (tlam k e)
-    llab : ∀ { n } → Value (label n)
+    vlab : ∀ { n } → Value (label n)
 --    vvar : ∀ {n} → Value (var n)
 --    vshift : ∀ { e e' } -> Value (shift₀ e' e)
 
@@ -89,6 +89,7 @@ plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
 
 infix 2 _↦_
 State = ℕ
+-- evaluation state, represents next label to be assigned
 data _↦_ : Expr × State → Expr × State → Set where
 --only redexes
   
@@ -120,34 +121,28 @@ data _-→_ : Expr × State → Expr × State → Set where
     → plug f e2' ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
 
-{-
-data Progress (E : Expr) : Set where
- step : ∀ {E'}
-   → E -→ E'
-   → Progress E
- done : Value E
-   → Progress E
 
-progress : ∀ {Δ Γ E A Eff}
+data Progress (E : Expr) (S : State) : Set where
+ step : ∀ {E' S'}
+   → E ,′ S -→ E' ,′ S'
+   → Progress E S
+ done : Value E
+   → Progress E S
+data _⊢s_ : State → Expr → Set where
+  -- represents proof that all labels are obtainable in current state
+  -- that is they are smaller than state
+  --TODO all constructors
+progress : ∀ {E A  S }→ {S ⊢s E}
   → ∅ , ∅ ⊢ E ⦂ A / nil
-  → Progress E
+  → Progress E S
 progress  (⊢var {x = x₁ } x _) = {!!}
+--progress (⊢weak _ x x₁ x₂) = {!!}
 progress (⊢weak _ x x₁ x₂) with nil<⦂⊥ x₁
 ... | refl = progress x₂
 progress (⊢lam x) = done vlam
-progress (⊢app x x₁) with progress x 
-... | step (x1-→x2) = step  (ξ-app₁ x1-→x2)
-... | done vlam with progress x₁
-...     | step (y1-→y2) = step (ξ-app₂ vlam y1-→y2)
-...     | done v2 = step ( (β-lam-app vlam v2) )
-
+progress (⊢app x x₁) = {!!}
 progress (⊢forall x) = done vLam
---progress (⊢new x) with progress x
---... | step (x1-→x2) = step (ξ-new x1-→x2)
---... | done v = step (β-new v)
-progress (⊢reset₀ _ x x₁ x₂) with progress x₁
-... | step (x1-→x2) = step (ξ-reset₀ x1-→x2)
-... | done v = step (β-reset₀-vl  v)
+progress (⊢new x) = {!!}
+progress (⊢reset₀ _ x x₁ x₂) = {!!}
 
-progress (⊢shift₀ x x₁) = {! progress x!}
--}
+progress (⊢label _ _) = done vlab
