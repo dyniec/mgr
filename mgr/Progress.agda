@@ -6,7 +6,7 @@ open import mgr.Types hiding (Rename;Subst;ext;rename;exts;subst;subst-zero;_[_]
 open import Data.Nat
 open import Data.List using (List;_∷_) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
-open import Data.Product using (_×_;_,′_)
+open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_)
 
 Rename = ℕ → ℕ
 
@@ -120,7 +120,15 @@ data _-→_ : Expr × State → Expr × State → Set where
     → plug f e1' ≡ e1
     → plug f e2' ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
-
+decompose : ∀ {A Effs} → (e : Expr) → (∅ , ∅ ⊢ e ⦂ A / Effs) → Σ[ f ∈ Frame ]  ( Σ[ e' ∈ Expr ] (plug f e' ≡ e))
+decompose (lam e) (⊢lam x) =    fempty ,,  (lam e) ,, refl
+decompose (app e e₁) (⊢app x x₁) = {!!}
+decompose (tlam x e) (⊢forall x₁) = fempty ,, (tlam x e) ,, refl
+decompose (tapp e x) ()
+decompose (new e) (⊢new x) = fempty ,, (new e) ,, refl
+decompose (shift₀ e e₁) (⊢shift₀ x x₁ x₂) = fempty ,, (shift₀ e e₁) ,, refl
+decompose (reset₀ e e₁ e₂) (⊢reset₀ x x₁ x₂ x₃) = {!!}
+decompose (label x) (⊢label x₁ x₂) = {!fempty ,, (label x) ,, refl!}
 
 data Progress (E : Expr) (S : State) : Set where
  step : ∀ {E' S'}
@@ -136,9 +144,6 @@ progress : ∀ {E A  S }→ {S ⊢s E}
   → ∅ , ∅ ⊢ E ⦂ A / nil
   → Progress E S
 progress  (⊢var {x = x₁ } x _) = {!!}
---progress (⊢weak _ x x₁ x₂) = {!!}
-progress (⊢weak _ x x₁ x₂) with nil<⦂⊥ x₁
-... | refl = progress x₂
 progress (⊢lam x) = done vlam
 progress (⊢app x x₁) = {!!}
 progress (⊢forall x) = done vLam

@@ -186,12 +186,14 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ ⊢ E ⦂effs
         → Δ , Γ ⊢ var x ⦂ A / E
     
-    ⊢weak : ∀ {Γ Δ e A A' E E'}
+{- TODO inline in ⊢app rule
+⊢weak : ∀ {Γ Δ e A A' E E'}
         → Δ ⊢ E' ⦂effs
         → Δ ⊢  A <t⦂ A'
         → Δ ⊢  E <⦂ E'
         → Δ , Γ ⊢ e ⦂ A / E
         → Δ , Γ ⊢ e ⦂ A' / E'
+-}
     
     ⊢lam : ∀ {Γ Δ e A B E}
         → Δ , (Γ , A) ⊢ e ⦂ B / E
