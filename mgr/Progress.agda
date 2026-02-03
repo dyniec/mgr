@@ -226,20 +226,20 @@ data Value : RExpr -> Set where
     vLam : ∀ { k e } → Value (tlam k e)
     vlab : ∀ { n } → Value (label n)
 
-data Frame  : Set where
-  fempty : Frame
-  fapp₁ : Frame → ( e : RExpr ) → Frame
-  fapp₂ : (e : RExpr) →  (v : Value e) -> Frame  -> Frame
-  freset₀ : Frame → (en : RExpr) → (e' : RExpr) -> Frame
-  fnew' : ℕ → Frame → Frame
-plug : Frame → RExpr → RExpr
+data Frame  : ℕ → Set where
+  fempty : Frame zero
+  fapp₁ : ∀ {n} → Frame n → ( e : RExpr ) → Frame n
+  fapp₂ : ∀ {n} (e : RExpr) →  (v : Value e) -> Frame n -> Frame n
+  freset₀ : ∀ {n} →  Frame n → (en : RExpr) → (e' : RExpr) -> Frame n
+  fnew' : ∀ {n} → ℕ → Frame n → Frame (suc n)
+plug : ∀ {n} → Frame n → RExpr → RExpr
 plug fempty e = e
 plug (fapp₁ f e₁) e =  app (plug f e) e₁
 plug (fapp₂ e₁ v f) e =  app e₁ (plug f e)
 plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
 plug (fnew' l f) e = new' l (plug f e)
 
-_∘f_ : Frame → Frame → Frame
+_∘f_ : ∀ {n m} → Frame n → Frame m  → Frame (n + m)
 fempty ∘f F = F
 fapp₁ N e ∘f F = fapp₁ (N ∘f F) e 
 fapp₂ e v N ∘f F = fapp₂ e v (N ∘f F)
@@ -269,16 +269,18 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → Value v
    → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
 
- Β-reset₀-k : ∀ {f es en e' e s}
-   → (plug f (shift₀ e' es)) ≡ e
-   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (plug f (var 0)) en e')  ]  ,′ s
+ Β-reset₀-k : ∀ {es en e' e s n} → { f : Frame n }
+   → (plug {n = n} f (shift₀ e' es)) ≡ e
+   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (plug f (var 0)) en e')  ]  ,′ s 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
-  -→frame : ∀ {f e1 e1' e2 e2' s s' }
+  -→frame : ∀ {e1 e1' e2 e2' s s' n } → {f : Frame n}
     → e1' ,′ s ↦ e2' ,′ s'
     → plug f e1' ≡ e1
     → plug f e2' ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
+--data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ , ∅ ⊢ e ⦂ A / Effs) → Set where
+  
 {-
 decompose : ∀ {A Effs} → (e : Expr) → (∅ , ∅ ⊢ e ⦂ A / Effs) → Σ[ f ∈ Frame ]  ( Σ[ e' ∈ Expr ] (plug f e' ≡ e))
 decompose (lam e) (⊢lam x) =    fempty ,,  (lam e) ,, refl
