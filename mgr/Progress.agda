@@ -1,7 +1,7 @@
 module mgr.Progress where
 
 
-open import mgr.Types hiding (_,_⊢_⦂_/_)
+open import mgr.Types renaming (_,_⊢_⦂_/_ to _,e_⊢_⦂_/_)
 
 open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
@@ -176,7 +176,7 @@ module Runtime where
             → Δ , Γ ⊢ new e ⦂ A / E
             
         ⊢new' : ∀ {Γ Δ e l A A1 E E1}
-            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.rename suc A / map (TypeSubst.rename suc) E --todo
+            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.rename suc A / map (TypeSubst.rename suc) E 
             → Δ , Γ ⊢ new' l e ⦂ A / E
 
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
@@ -196,6 +196,27 @@ module Runtime where
             → Δ ⊢ A ⦂t
             → Δ ⊢ E ⦂effs
             → Δ , Γ ⊢ label l ⦂ (L n at A / E) / nil
+
+    runtime : Expr → RExpr
+    runtime (var x) = var x
+    runtime (lam x) = lam (runtime x)
+    runtime (app x x₁) = app (runtime x) (runtime x₁)
+    runtime (tlam x x₁) =  tlam x (runtime x₁)
+    runtime (tapp x x₁) = tapp (runtime x) x₁
+    runtime (new x) = new (runtime x)
+    runtime (shift₀ x x₁) =  shift₀ (runtime x) (runtime x₁)
+    runtime (reset₀ x x₁ x₂) = reset₀ (runtime x) (runtime x₁) (runtime x₂)
+
+    runtime-types : ∀ {Δ Γ e T E}
+      → Δ ,e Γ ⊢ e ⦂ T / E → (Δ , Γ ⊢ (runtime e) ⦂ T / E)
+    runtime-types (⊢var x x₁) = ⊢var x x₁
+    runtime-types (⊢lam x) = ⊢lam (runtime-types x)
+    runtime-types (⊢app x x₁ x₂ x₃ x₄ x₅ x₆) = ⊢app (runtime-types x) (runtime-types x₁) x₂ x₃ x₄ x₅ x₆
+    runtime-types (⊢forall x) = ⊢forall (runtime-types x)
+    runtime-types (⊢tapp x x₁) = ⊢tapp x (runtime-types x₁)
+    runtime-types (⊢new x) = ⊢new (runtime-types x)
+    runtime-types (⊢shift₀ x x₁ x₂) = ⊢shift₀ x (runtime-types x₁) (runtime-types x₂)
+    runtime-types (⊢reset₀ x x₁ x₂ x₃) = ⊢reset₀ x (runtime-types x₁) (runtime-types x₂) (runtime-types x₃)
         
 
 open Runtime
@@ -204,8 +225,6 @@ data Value : RExpr -> Set where
     vlam : ∀ { e } → Value (lam e)
     vLam : ∀ { k e } → Value (tlam k e)
     vlab : ∀ { n } → Value (label n)
---    vvar : ∀ {n} → Value (var n)
---    vshift : ∀ { e e' } -> Value (shift₀ e' e)
 
 data Frame  : Set where
   fempty : Frame
