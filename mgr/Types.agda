@@ -29,60 +29,57 @@ data Expr : Set where
     new : Expr → Expr
     shift₀ : Expr → Expr → Expr
     reset₀ : Expr → Expr → Expr → Expr
-    label : ℕ → Expr
+module TypeSubst where
+    Rename = ℕ → ℕ
+    Subst = ℕ → Type
+    ext : Rename → Rename
+    ext ρ zero = zero
+    ext ρ (suc x) = suc (ρ x)
 
-Rename = ℕ → ℕ
-Subst = ℕ → Type
-ext : Rename → Rename
-ext ρ zero = zero
-ext ρ (suc x) = suc (ρ x)
+    rename : Rename → (Type → Type)
+    rename' : Rename → (Effects → Effects)
+    rename ρ (ttv x) = ttv (ρ x)
+    rename ρ (x - effs > x₁) = rename ρ x -  rename' ρ effs > rename ρ x₁
+    rename ρ (forallt k x) = forallt k (rename (ext ρ) x)
+    rename ρ (L x at x₁ / effs) =  L  rename ρ x at  rename ρ x₁ / rename' ρ effs
+    -- doing mutal recursion because I couldn't convice termination checker that calling map is productive
+    rename' ρ nil = nil
+    rename' ρ (x ∷ xs) = rename ρ x ∷ rename' ρ xs
 
-rename : Rename → (Type → Type)
-rename' : Rename → (Effects → Effects)
-rename ρ (ttv x) = ttv (ρ x)
-rename ρ (x - effs > x₁) = rename ρ x -  rename' ρ effs > rename ρ x₁
-rename ρ (forallt k x) = forallt k (rename (ext ρ) x)
-rename ρ (L x at x₁ / effs) =  L  rename ρ x at  rename ρ x₁ / rename' ρ effs
--- doing mutal recursion because I couldn't convice termination checker that calling map is productive
-rename' ρ nil = nil
-rename' ρ (x ∷ xs) = rename ρ x ∷ rename' ρ xs
+    exts : Subst → Subst
+    exts ρ zero = ttv zero
+    exts ρ (suc x) = rename suc (ρ x)
 
-exts : Subst → Subst
-exts ρ zero = ttv zero
-exts ρ (suc x) = rename suc (ρ x)
+    subst : Subst → ( Type → Type)
+    subst' : Subst → ( Effects → Effects)
+    subst ρ (ttv x) = ρ x
+    subst ρ (t - x > t₁) =  subst ρ t - subst' ρ x > subst ρ t₁
+    subst ρ (forallt k t) = forallt k (subst (exts ρ) t)
+    subst ρ (L x at t / x₁) = L subst ρ x at subst ρ t / subst' ρ x₁
+    subst' ρ nil = nil
+    subst' ρ (x ∷ x₁) = subst ρ x ∷ subst' ρ x₁
 
-subst : Subst → ( Type → Type)
-subst' : Subst → ( Effects → Effects)
-subst ρ (ttv x) = ρ x
-subst ρ (t - x > t₁) =  subst ρ t - subst' ρ x > subst ρ t₁
-subst ρ (forallt k t) = forallt k (subst (exts ρ) t)
-subst ρ (L x at t / x₁) = L subst ρ x at subst ρ t / subst' ρ x₁
-subst' ρ nil = nil
-subst' ρ (x ∷ x₁) = subst ρ x ∷ subst' ρ x₁
+    subst-zero : Type → Subst
+    subst-zero t zero = t
+    subst-zero t (suc x) = ttv x
 
-subst-zero : Type → Subst
-subst-zero t zero = t
-subst-zero t (suc x) = ttv x
+    subst-in-expr : Subst → Expr → Expr
+    subst-in-expr ρ (tlam k e) = tlam k (subst-in-expr (exts ρ) e)
+    subst-in-expr ρ (new e) =  new (subst-in-expr (exts ρ) e)
+    subst-in-expr ρ (tapp e t) = tapp (subst-in-expr ρ e) (subst ρ t)
+    subst-in-expr ρ (var x) = var x
+    subst-in-expr ρ (lam e) =  lam (subst-in-expr ρ e)
+    subst-in-expr ρ (app e e₁) =  app (subst-in-expr ρ e) (subst-in-expr ρ e₁)
+    subst-in-expr ρ (shift₀ e e₁) =  shift₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁)
+    subst-in-expr ρ (reset₀ e e₁ e₂) = reset₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁) (subst-in-expr ρ e₂)
 
-subst-in-expr : Subst → Expr → Expr
-subst-in-expr ρ (tlam k e) = tlam k (subst-in-expr (exts ρ) e)
-subst-in-expr ρ (new e) =  new (subst-in-expr (exts ρ) e)
-subst-in-expr ρ (tapp e t) = tapp e (subst ρ t)
-subst-in-expr ρ (var x) = var x
-subst-in-expr ρ (lam e) =  lam (subst-in-expr ρ e)
-subst-in-expr ρ (app e e₁) =  app (subst-in-expr ρ e) (subst-in-expr ρ e₁)
-subst-in-expr ρ (shift₀ e e₁) =  shift₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁)
-subst-in-expr ρ (reset₀ e e₁ e₂) = reset₀ (subst-in-expr ρ e) (subst-in-expr ρ e₁) (subst-in-expr ρ e₂)
-subst-in-expr ρ (label n) = label n
-
-infix 8 _[_]
-_[_] : Type → Type → Type
-M [ N ] = subst (subst-zero N) M
-_e[t_] : Expr → Type → Expr
-M e[t t ] = subst-in-expr (subst-zero t) M
-_effs[t_] : Effects → Type → Effects
-nil effs[t t ] = nil
-(x ∷ xs) effs[t t ] = (x [ t ])∷ xs effs[t t ]
+    _[_] : Type → Type → Type
+    M [ N ] = subst (subst-zero N) M
+    _e[t_] : Expr → Type → Expr
+    M e[t t ] = subst-in-expr (subst-zero t) M
+    _effs[t_] : Effects → Type → Effects
+    nil effs[t t ] = nil
+    (x ∷ xs) effs[t t ] = (x [ t ])∷ xs effs[t t ]
 
 infixl 5  _,_
 data Context : Set where
@@ -178,31 +175,27 @@ data _⊢_<t⦂_ : TContext → Type → Type → Set where
         → (Δ , k) ⊢ A1 <t⦂ A2
         → Δ ⊢ forallt k A1 <t⦂ forallt k A2
 
-
+open TypeSubst
 data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
-
     ⊢var : ∀ {Γ Δ x A E}
         → Γ ∋ x ⦂ A
         → Δ ⊢ E ⦂effs
         → Δ , Γ ⊢ var x ⦂ A / E
     
-{- TODO inline in ⊢app rule
-⊢weak : ∀ {Γ Δ e A A' E E'}
-        → Δ ⊢ E' ⦂effs
-        → Δ ⊢  A <t⦂ A'
-        → Δ ⊢  E <⦂ E'
-        → Δ , Γ ⊢ e ⦂ A / E
-        → Δ , Γ ⊢ e ⦂ A' / E'
--}
     
     ⊢lam : ∀ {Γ Δ e A B E}
         → Δ , (Γ , A) ⊢ e ⦂ B / E
         → Δ , Γ ⊢ lam e ⦂ A - E > B / E
 
-    ⊢app : ∀ {Γ Δ e1 e2 A B E}
-        → Δ , Γ ⊢ e1 ⦂ A - E > B / E
-        → Δ , Γ ⊢ e2 ⦂ A / E
-        → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
+    ⊢app : ∀ {Γ Δ e1 e2 A1 A2 B  A' B' E1 E2 E'}
+        → Δ , Γ ⊢ e1 ⦂ A1 - E1 > B / E1
+        → Δ , Γ ⊢ e2 ⦂ A2 / E2
+        → Δ ⊢ E' ⦂effs
+        → Δ ⊢ (A1 - E1 > B) <t⦂ (A' - E' > B')
+        → Δ ⊢ E1 <⦂ E' -- implied implicitly by above
+        → Δ ⊢ A2 <t⦂ A'
+        → Δ ⊢ E2 <⦂ E'
+        → Δ , Γ ⊢ app e1 e2  ⦂ B' / E' 
 
     ⊢forall : ∀ {Γ Δ e k A E}
         → (Δ , k) , Γ  ⊢ e ⦂ rename suc A / map (rename suc) E
@@ -230,7 +223,3 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
-    ⊢label : ∀ {Γ Δ n n' A E}
-      → Δ ⊢ A ⦂t
-      → Δ ⊢ E ⦂effs
-      → Δ , Γ ⊢ label n ⦂ (L n' at A / E) / nil 
