@@ -45,6 +45,8 @@ module TypeSubst where
     -- doing mutal recursion because I couldn't convice termination checker that calling map is productive
     rename' ρ nil = nil
     rename' ρ (x ∷ xs) = rename ρ x ∷ rename' ρ xs
+    bump = rename suc
+    bump' = rename' suc
 
     exts : Subst → Subst
     exts ρ zero = ttv zero
@@ -182,23 +184,33 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ ⊢ E ⦂effs
         → Δ , Γ ⊢ var x ⦂ A / E
     
-    
     ⊢lam : ∀ {Γ Δ e A B E}
         → Δ , (Γ , A) ⊢ e ⦂ B / E
-        → Δ , Γ ⊢ lam e ⦂ A - E > B / E
-
-    ⊢app : ∀ {Γ Δ e1 e2 A1 A2 B  A' B' E1 E2 E'}
+        → Δ , Γ ⊢ lam e ⦂ A - E > B / nil
+    {-
+    ⊢app : ∀ {Γ Δ e1 e2 A1 A2 B  A'  E1 E2 E'}
         → Δ , Γ ⊢ e1 ⦂ A1 - E1 > B / E1
         → Δ , Γ ⊢ e2 ⦂ A2 / E2
         → Δ ⊢ E' ⦂effs
-        → Δ ⊢ (A1 - E1 > B) <t⦂ (A' - E' > B')
+        → Δ ⊢ (A1 - E1 > B) <t⦂ (A' - E' > B)
         → Δ ⊢ E1 <⦂ E' -- implied implicitly by above
         → Δ ⊢ A2 <t⦂ A'
         → Δ ⊢ E2 <⦂ E'
-        → Δ , Γ ⊢ app e1 e2  ⦂ B' / E' 
-
+        → Δ , Γ ⊢ app e1 e2  ⦂ B / E'
+     -}
+    ⊢weak : ∀ {Γ Δ e A A' E E'}
+        → Δ ⊢ E' ⦂effs
+        → Δ ⊢  A <t⦂ A'
+        → Δ ⊢  E <⦂ E'
+        → Δ , Γ ⊢ e ⦂ A / E
+        → Δ , Γ ⊢ e ⦂ A' / E' 
+    ⊢app : ∀ {Γ Δ e1 e2 A B E}
+        → Δ , Γ ⊢ e1 ⦂ A - E > B / E
+        → Δ , Γ ⊢ e2 ⦂ A / E
+        → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
+                                    
     ⊢forall : ∀ {Γ Δ e k A E}
-        → (Δ , k) , Γ  ⊢ e ⦂ rename suc A / map (rename suc) E
+        → (Δ , k) , Γ  ⊢ e ⦂ bump A / bump' E
         → Δ , Γ ⊢ tlam k e ⦂ forallt k A / E
 
     ⊢tapp : ∀ {Γ Δ e k A T E}
@@ -207,7 +219,7 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → (Δ , k) , Γ ⊢ tapp e T ⦂ A [ T ] / (E effs[t T ])
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
-        → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ rename suc A / map (rename suc) E
+        → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ bump A / bump' E
         → Δ , Γ ⊢ new e ⦂ A / E
 
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}

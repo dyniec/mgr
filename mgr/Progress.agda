@@ -12,7 +12,6 @@ module ExprSubst where
     Rename = ℕ → ℕ
 
     Subst = ℕ → Expr
-
     ext : Rename → Rename 
     ext ρ zero    = zero
     ext ρ (suc x) = suc (ρ x)
@@ -54,13 +53,6 @@ module ExprSubst where
     _ = refl
     _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
     _ = refl
-{- typed frames
-data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects →   Set where
-  fempty : Frame Δ Γ T Eff T Eff
-  fapp₁ : ∀ {A B E } → {  e : Expr } → { Δ , Γ ⊢ e ⦂ A / E  } → Frame Δ Γ T Eff (A - E > B) E → Frame Δ Γ T Eff B E
-  fapp₂ : ∀ {A B E} → {e : Expr} → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - E > B) / E } -> Frame Δ Γ T Eff A E  -> Frame Δ Γ T Eff B E
-  freset₀ :
--}
 
 module Runtime where
     data RExpr : Set where --runtime version
@@ -150,8 +142,8 @@ module Runtime where
 
         ⊢lam : ∀ {Γ Δ e A B E}
             → Δ , (Γ , A) ⊢ e ⦂ B / E
-            → Δ , Γ ⊢ lam e ⦂ A - E > B / E
-
+            → Δ , Γ ⊢ lam e ⦂ A - E > B / nil
+        {-
         ⊢app : ∀ {Γ Δ e1 e2 A1 A2 B  A' B' E1 E2 E'}
             → Δ , Γ ⊢ e1 ⦂ A1 - E1 > B / E1
             → Δ , Γ ⊢ e2 ⦂ A2 / E2
@@ -160,10 +152,22 @@ module Runtime where
             → Δ ⊢ E1 <⦂ E' -- implied implicitly by above
             → Δ ⊢ A2 <t⦂ A'
             → Δ ⊢ E2 <⦂ E'
-            → Δ , Γ ⊢ app e1 e2  ⦂ B' / E' 
+            → Δ , Γ ⊢ app e1 e2  ⦂ B' / E'
+          -}
+        ⊢weak : ∀ {Γ Δ e A A' E E'}
+            → Δ ⊢ E' ⦂effs
+            → Δ ⊢  A <t⦂ A'
+            → Δ ⊢  E <⦂ E'
+            → Δ , Γ ⊢ e ⦂ A / E
+            → Δ , Γ ⊢ e ⦂ A' / E' 
+        ⊢app : ∀ {Γ Δ e1 e2 A B E}
+            → Δ , Γ ⊢ e1 ⦂ A - E > B / E
+            → Δ , Γ ⊢ e2 ⦂ A / E
+            → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
+                                    
 
         ⊢forall : ∀ {Γ Δ e k A E}
-            → (Δ , k) , Γ  ⊢ e ⦂ TypeSubst.rename suc A / map (TypeSubst.rename suc) E
+            → (Δ , k) , Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
             → Δ , Γ ⊢ tlam k e ⦂ forallt k A / E
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
@@ -172,11 +176,11 @@ module Runtime where
             → (Δ , k) , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
-            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.rename suc A / map (TypeSubst.rename suc) E
+            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
             → Δ , Γ ⊢ new e ⦂ A / E
             
-        ⊢new' : ∀ {Γ Δ e l A A1 E E1}
-            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.rename suc A / map (TypeSubst.rename suc) E 
+        ⊢new' : ∀ {Γ Δ e l A E}
+            → (Δ , Kind.E) , Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E 
             → Δ , Γ ⊢ new' l e ⦂ A / E
 
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
@@ -211,12 +215,14 @@ module Runtime where
       → Δ ,e Γ ⊢ e ⦂ T / E → (Δ , Γ ⊢ (runtime e) ⦂ T / E)
     runtime-types (⊢var x x₁) = ⊢var x x₁
     runtime-types (⊢lam x) = ⊢lam (runtime-types x)
-    runtime-types (⊢app x x₁ x₂ x₃ x₄ x₅ x₆) = ⊢app (runtime-types x) (runtime-types x₁) x₂ x₃ x₄ x₅ x₆
+    runtime-types (⊢app x x₁) = ⊢app (runtime-types x) (runtime-types x₁) 
+    runtime-types (⊢weak x x₁ x₂ x₃) = ⊢weak x x₁ x₂ (runtime-types x₃)
     runtime-types (⊢forall x) = ⊢forall (runtime-types x)
     runtime-types (⊢tapp x x₁) = ⊢tapp x (runtime-types x₁)
     runtime-types (⊢new x) = ⊢new (runtime-types x)
     runtime-types (⊢shift₀ x x₁ x₂) = ⊢shift₀ x (runtime-types x₁) (runtime-types x₂)
     runtime-types (⊢reset₀ x x₁ x₂ x₃) = ⊢reset₀ x (runtime-types x₁) (runtime-types x₂) (runtime-types x₃)
+
         
 
 open Runtime
@@ -225,26 +231,43 @@ data Value : RExpr -> Set where
     vlam : ∀ { e } → Value (lam e)
     vLam : ∀ { k e } → Value (tlam k e)
     vlab : ∀ { n } → Value (label n)
-
+{-
 data Frame  : ℕ → Set where
   fempty : Frame zero
   fapp₁ : ∀ {n} → Frame n → ( e : RExpr ) → Frame n
   fapp₂ : ∀ {n} (e : RExpr) →  (v : Value e) -> Frame n -> Frame n
   freset₀ : ∀ {n} →  Frame n → (en : RExpr) → (e' : RExpr) -> Frame n
   fnew' : ∀ {n} → ℕ → Frame n → Frame (suc n)
-plug : ∀ {n} → Frame n → RExpr → RExpr
-plug fempty e = e
-plug (fapp₁ f e₁) e =  app (plug f e) e₁
-plug (fapp₂ e₁ v f) e =  app e₁ (plug f e)
-plug (freset₀ f en e') e =  reset₀ (plug f e) en e'
-plug (fnew' l f) e = new' l (plug f e)
+-}
+-- typed frames
+data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ →  Set where
+  -- parametrized by: Δ Γ - typing context outside of frame
+  -- T - type of the hole (deBruijn indexes of types are with respect of the hole (so well typed in Δ')
+  -- Eff - effects of frame - indexed with respect of whole frame
+  --  indexed by Type - returned type of frame if plugged correctly
+  --  indexed by Effects - effects of hole, indices respective to hole
+  --  indexed by Tcontext - typing context of the hole, should be the same as Δ + n* Kind.E
+  -- indexed by ℕ - amount of new' constructors - means how typing context changed between hole and whole frame
+  fempty : Frame Δ Γ T Eff T Eff Δ zero
+  fapp₁ : ∀ {A B n Δ' E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ , Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
+  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ' n  -> Frame Δ Γ T Eff B E Δ' n 
+  fnew' : ∀ {A n Δ' E} → ℕ → Frame (Δ , Kind.E) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ Γ T Eff A E Δ' (suc n)
 
-_∘f_ : ∀ {n m} → Frame n → Frame m  → Frame (n + m)
+plug : ∀ {Δ Δ' Γ T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' , Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ , Γ ⊢ res ⦂ A / Eff) 
+plug fempty e t = e ,, t
+plug (fapp₁ f e₁ {te₁}) e t  with (plug f e t)
+... | (res ,, tt) =  app res  e₁ ,, (⊢app tt te₁)
+plug (fapp₂ e₁ {_} {te₁} f) e t with (plug f e t)
+... | (res ,, tt ) =  app e₁ res ,, ⊢app te₁ tt
+plug (fnew' l f) e t with (plug f e t)
+... | (res ,, tt) = new' l res ,, ⊢new' tt 
+
+_∘f_ : ∀ {Δ Δ' Δ'' Γ Eff Eff' Eff'' A B C n m} → Frame Δ Γ B Eff A Eff' Δ' n → Frame Δ' Γ C Eff' B Eff'' Δ''  m → Frame Δ Γ C Eff A Eff'' Δ'' (n + m)
 fempty ∘f F = F
-fapp₁ N e ∘f F = fapp₁ (N ∘f F) e 
-fapp₂ e v N ∘f F = fapp₂ e v (N ∘f F)
-freset₀ N en e' ∘f F = freset₀ (N ∘f F) en e'
-fnew' x N ∘f F = fnew' x (N ∘f F)
+fapp₁ f e {t} ∘f F = fapp₁ (f ∘f F )  e {t} 
+fapp₂ e {v} {t} f ∘f F = fapp₂ e {v} {t} (f ∘f F)
+fnew' l f ∘f F = fnew' l (f ∘f F)
+
 
 infix 2 _↦_
 State = ℕ
@@ -269,16 +292,17 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → Value v
    → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n} → { f : Frame n }
-   → (plug {n = n} f (shift₀ e' es)) ≡ e
-   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (plug f (var 0)) en e')  ]  ,′ s 
+ Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Frame Δ Γ T Eff A Eff' Δ' n } → {t : Δ' , Γ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+   → (Data.Product.proj₁ (plug  f (shift₀ e' es) t)) ≡ e
+   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (plug f (var 0) t')) en e')  ]  ,′ s 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
-  -→frame : ∀ {e1 e1' e2 e2' s s' n } → {f : Frame n}
+  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' Γ A T Eff Eff' t1 t2} → {f : Frame Δ Γ T Eff A Eff' Δ' n}
     → e1' ,′ s ↦ e2' ,′ s'
-    → plug f e1' ≡ e1
-    → plug f e2' ≡ e2
+    → Data.Product.proj₁ (plug f e1' t1) ≡ e1
+    → Data.Product.proj₁ (plug f e2' t2) ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
+
 --data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ , ∅ ⊢ e ⦂ A / Effs) → Set where
   
 {-
