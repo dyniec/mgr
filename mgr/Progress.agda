@@ -1,12 +1,15 @@
 module mgr.Progress where
 
 
-open import mgr.Types renaming (_,_⊢_⦂_/_ to _,e_⊢_⦂_/_)
+open import mgr.Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
 
 open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
+import Data.Maybe
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_)
+
+
 
 module ExprSubst where
     Rename = ℕ → ℕ
@@ -55,6 +58,7 @@ module ExprSubst where
     _ = refl
 
 module Runtime where
+    Label = ℕ
     data RExpr : Set where --runtime version
         var : ℕ → RExpr
         lam : RExpr → RExpr
@@ -62,12 +66,92 @@ module Runtime where
         tlam : Kind → RExpr → RExpr
         tapp : RExpr -> Type -> RExpr
         new : RExpr → RExpr
-        new' : ℕ → RExpr → RExpr -- label is already assigned, keeping shape of new to prove preservation
+        new' : Label → RExpr → RExpr -- label is already assigned, keeping shape of new to prove preservation
         shift₀ : RExpr → RExpr → RExpr
         reset₀ : RExpr → RExpr → RExpr → RExpr
-        label : ℕ → RExpr -- label for effects
+        label : Label → RExpr -- label for effects
+    data TContext : Set where
+      ∅ : TContext
+      `t : TContext → TContext
+      `e : Data.Maybe.Maybe Label → TContext → TContext
+    push : Kind → TContext → TContext
+    push E xs = `e Data.Maybe.nothing xs
+    push T xs = `t xs
+    data _∋t_⦂_ : TContext → Id → Kind → Set where
+        Zt : ∀ {Δ }
+            → `t Δ   ∋t zero ⦂ T
 
-    
+        Ze : ∀ {Δ l }
+            → `e l Δ   ∋t zero ⦂ T
+
+        St : ∀ {Δ x k}
+            → Δ ∋t x ⦂ k
+            → `t Δ   ∋t (suc x) ⦂ k
+        Se : ∀ {Δ x l k}
+            → Δ ∋t x ⦂ k
+            → `e l Δ  ∋t (suc x) ⦂ k
+
+    data _∋l_⦂_ : TContext → Id → Label → Set where
+        Z : ∀ {Δ l }
+            → `e (Data.Maybe.just l) Δ   ∋l zero ⦂ l
+        St : ∀ {Δ x l}
+            → Δ ∋l x ⦂ l
+            → `t Δ   ∋l (suc x) ⦂ l
+        Se : ∀ {Δ x l l'}
+            → Δ ∋l x ⦂ l
+            → `e l' Δ  ∋l (suc x) ⦂ l
+    data _⊢_⦂e : TContext → Type → Set where
+        ⊢ttv : ∀ {Δ n}
+            → Δ ∋t n ⦂ E
+            → Δ ⊢ ttv n ⦂e
+    data _⊢_⦂t : TContext → Type → Set
+    data _⊢_⦂effs : TContext → Effects → Set
+    data _⊢_⦂t where
+        ⊢ttv : ∀ {Δ n }
+            → Δ ∋t n ⦂ T
+            → Δ ⊢ ttv n ⦂t
+        ⊢-> : ∀ {Δ t1 effs t2}
+            → Δ ⊢ t1 ⦂t
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ t2 ⦂t
+            → Δ ⊢ t1 - effs > t1 ⦂t
+        ⊢forall : ∀ {Δ k t}
+            → (push k Δ) ⊢ t ⦂t 
+            → Δ ⊢ forallt k t ⦂t
+        ⊢label : ∀ {Δ e t effs}
+            → Δ ⊢ e ⦂e
+            → Δ ⊢ t ⦂t
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ L e at t / effs ⦂t
+    data _⊢_⦂effs where
+        ⊢nil : ∀ {Δ}
+            → Δ ⊢ nil ⦂effs
+        ⊢cons : ∀ {Δ e effs}
+            → Δ ⊢ e ⦂e
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ e ∷ effs ⦂effs
+    data _⊢_<⦂_ : TContext → Effects → Effects → Set where
+        Z : ∀ {Δ E}
+            → Δ ⊢ E ⦂effs
+            → Δ ⊢ nil <⦂ E
+        S : ∀ {Δ e E1 E2 }
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ e ⦂e
+            → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+
+    data _⊢_<t⦂_ : TContext → Type → Type → Set where
+
+        <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
+
+        <⦂→ : ∀ {Δ A1 A2 B1 B2 E1 E2}
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ A1 <t⦂ A2
+            → Δ ⊢ B1 <t⦂ B2 
+            → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
+
+        <⦂forall : ∀ {Δ A1 A2 k}
+            → (push k Δ) ⊢ A1 <t⦂ A2
+            → Δ ⊢ forallt k A1 <t⦂ forallt k A2
     module RExprSubst where
         Rename = ℕ → ℕ
 
@@ -132,74 +216,63 @@ module Runtime where
         _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
         _ = refl
     open RExprSubst
-    data _,_⊢_⦂_/_ : TContext → Context → RExpr → Type → Effects → Set where
+
+    data _⨾_⊢_⦂_/_ : TContext → Context → RExpr → Type → Effects → Set where
 
         ⊢var : ∀ {Γ Δ x A E}
             → Γ ∋ x ⦂ A
             → Δ ⊢ E ⦂effs
-            → Δ , Γ ⊢ var x ⦂ A / E
+            → Δ ⨾ Γ ⊢ var x ⦂ A / E
 
 
         ⊢lam : ∀ {Γ Δ e A B E}
-            → Δ , (Γ , A) ⊢ e ⦂ B / E
-            → Δ , Γ ⊢ lam e ⦂ A - E > B / nil
-        {-
-        ⊢app : ∀ {Γ Δ e1 e2 A1 A2 B  A' B' E1 E2 E'}
-            → Δ , Γ ⊢ e1 ⦂ A1 - E1 > B / E1
-            → Δ , Γ ⊢ e2 ⦂ A2 / E2
-            → Δ ⊢ E' ⦂effs
-            → Δ ⊢ (A1 - E1 > B) <t⦂ (A' - E' > B')
-            → Δ ⊢ E1 <⦂ E' -- implied implicitly by above
-            → Δ ⊢ A2 <t⦂ A'
-            → Δ ⊢ E2 <⦂ E'
-            → Δ , Γ ⊢ app e1 e2  ⦂ B' / E'
-          -}
+            → Δ ⨾ (Γ , A) ⊢ e ⦂ B / E
+            → Δ ⨾ Γ ⊢ lam e ⦂ A - E > B / nil
         ⊢weak : ∀ {Γ Δ e A A' E E'}
             → Δ ⊢ E' ⦂effs
             → Δ ⊢  A <t⦂ A'
             → Δ ⊢  E <⦂ E'
-            → Δ , Γ ⊢ e ⦂ A / E
-            → Δ , Γ ⊢ e ⦂ A' / E' 
+            → Δ ⨾ Γ ⊢ e ⦂ A / E
+            → Δ  ⨾ Γ ⊢ e ⦂ A' / E'
         ⊢app : ∀ {Γ Δ e1 e2 A B E}
-            → Δ , Γ ⊢ e1 ⦂ A - E > B / E
-            → Δ , Γ ⊢ e2 ⦂ A / E
-            → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
-                                    
-
+            → Δ ⨾ Γ ⊢ e1 ⦂ A - E > B / E
+            → Δ ⨾ Γ ⊢ e2 ⦂ A / E
+            → Δ ⨾ Γ ⊢ app e1 e2  ⦂ B / E
         ⊢forall : ∀ {Γ Δ e k A E}
-            → (Δ , k) , Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
-            → Δ , Γ ⊢ tlam k e ⦂ forallt k A / E
+            → (push k Δ ) ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            → Δ ⨾ Γ ⊢ tlam k e ⦂ forallt k A / E
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
             → Δ ⊢ T ⦂t
-            → Δ , Γ ⊢ e ⦂ forallt k A / E
-            → (Δ , k) , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
+            → Δ ⨾ Γ ⊢ e ⦂ forallt k A / E
+            → (push k Δ)  ⨾ Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 
-        ⊢new : ∀ {Γ Δ e  A A1 E E1}
-            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
-            → Δ , Γ ⊢ new e ⦂ A / E
+        ⊢new : ∀ {Γ  Δ e  A A1 E E1}
+            → (push Kind.E Δ)  ⨾ (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            → Δ ⨾ Γ ⊢ new e ⦂ A / E
             
         ⊢new' : ∀ {Γ Δ e l A E}
-            → (Δ , Kind.E) , Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E 
-            → Δ , Γ ⊢ new' l e ⦂ A / E
+            → (`e (Data.Maybe.just l) Δ)  ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E 
+            → Δ  ⨾ Γ ⊢ new' l e ⦂ A / E
 
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
             → Δ ⊢ ttv n ⦂e
-            → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
-            → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
-            → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
+            → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            → Δ ⨾ (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
+            → Δ ⨾ Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
             → Δ ⊢ ttv n ⦂e
-            → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
-            → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
-            → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
-            → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
+            → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            → Δ ⨾ Γ   ⊢ e ⦂ A / (ttv n ∷ E')
+            → Δ ⨾ (Γ , A)   ⊢ en ⦂ A' /  E'
+            → Δ ⨾ Γ   ⊢ reset₀ e en e' ⦂ A' / E'
 
         ⊢label : ∀ {Γ Δ n l A E}
             → Δ ⊢ A ⦂t
             → Δ ⊢ E ⦂effs
-            → Δ , Γ ⊢ label l ⦂ (L n at A / E) / nil
+            → Δ ∋l n ⦂ l
+            → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / nil
 
     runtime : Expr → RExpr
     runtime (var x) = var x
@@ -210,10 +283,14 @@ module Runtime where
     runtime (new x) = new (runtime x)
     runtime (shift₀ x x₁) =  shift₀ (runtime x) (runtime x₁)
     runtime (reset₀ x x₁ x₂) = reset₀ (runtime x) (runtime x₁) (runtime x₂)
-
-    runtime-types : ∀ {Δ Γ e T E}
-      → Δ ,e Γ ⊢ e ⦂ T / E → (Δ , Γ ⊢ (runtime e) ⦂ T / E)
-    runtime-types (⊢var x x₁) = ⊢var x x₁
+    runtimeΔ : mgr.Types.TContext → TContext
+    runtimeΔ ∅ = ∅
+    runtimeΔ (Δ , T) = `t (runtimeΔ Δ)
+    runtimeΔ (Δ , E) = `e (Data.Maybe.nothing) (runtimeΔ Δ)
+    {-
+    runtime-types : ∀ {Δ Γ  e T E}
+      → Δ , Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ Γ ⊢ (runtime e) ⦂ T / E)
+    runtime-types (⊢var x x₁) = ⊢var {!!} {!!}
     runtime-types (⊢lam x) = ⊢lam (runtime-types x)
     runtime-types (⊢app x x₁) = ⊢app (runtime-types x) (runtime-types x₁) 
     runtime-types (⊢weak x x₁ x₂ x₃) = ⊢weak x x₁ x₂ (runtime-types x₃)
@@ -222,7 +299,7 @@ module Runtime where
     runtime-types (⊢new x) = ⊢new (runtime-types x)
     runtime-types (⊢shift₀ x x₁ x₂) = ⊢shift₀ x (runtime-types x₁) (runtime-types x₂)
     runtime-types (⊢reset₀ x x₁ x₂ x₃) = ⊢reset₀ x (runtime-types x₁) (runtime-types x₂) (runtime-types x₃)
-
+    -}
         
 
 open Runtime
@@ -231,29 +308,25 @@ data Value : RExpr -> Set where
     vlam : ∀ { e } → Value (lam e)
     vLam : ∀ { k e } → Value (tlam k e)
     vlab : ∀ { n } → Value (label n)
-{-
-data Frame  : ℕ → Set where
-  fempty : Frame zero
-  fapp₁ : ∀ {n} → Frame n → ( e : RExpr ) → Frame n
-  fapp₂ : ∀ {n} (e : RExpr) →  (v : Value e) -> Frame n -> Frame n
-  freset₀ : ∀ {n} →  Frame n → (en : RExpr) → (e' : RExpr) -> Frame n
-  fnew' : ∀ {n} → ℕ → Frame n → Frame (suc n)
--}
+
+
 -- typed frames
-data Frame (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ →  Set where
+-- it would be normally named Context, but that's taken by Context used in typing
+data Frame (Δ : TContext)  (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ →  Set where
   -- parametrized by: Δ Γ - typing context outside of frame
   -- T - type of the hole (deBruijn indexes of types are with respect of the hole (so well typed in Δ')
   -- Eff - effects of frame - indexed with respect of whole frame
-  --  indexed by Type - returned type of frame if plugged correctly
-  --  indexed by Effects - effects of hole, indices respective to hole
-  --  indexed by Tcontext - typing context of the hole, should be the same as Δ + n* Kind.E
+  -- indexed by Type - returned type of frame if plugged correctly
+  -- indexed by Effects - effects of hole, indices respective to hole
+  -- indexed by Tcontext - typing context of the hole, should be the same as Δ + n* Kind.E
   -- indexed by ℕ - amount of new' constructors - means how typing context changed between hole and whole frame
   fempty : Frame Δ Γ T Eff T Eff Δ zero
-  fapp₁ : ∀ {A B n Δ' E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ , Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
-  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ , Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ' n  -> Frame Δ Γ T Eff B E Δ' n 
-  fnew' : ∀ {A n Δ' E} → ℕ → Frame (Δ , Kind.E) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ Γ T Eff A E Δ' (suc n)
+  fapp₁ : ∀ {A B n Δ'  E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
+  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n 
+  fnew' : ∀ {A n Δ' E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ Γ T Eff A E Δ' (suc n)
 
-plug : ∀ {Δ Δ' Γ T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' , Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ , Γ ⊢ res ⦂ A / Eff) 
+
+plug : ∀ {Δ Δ' Γ T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff) 
 plug fempty e t = e ,, t
 plug (fapp₁ f e₁ {te₁}) e t  with (plug f e t)
 ... | (res ,, tt) =  app res  e₁ ,, (⊢app tt te₁)
@@ -268,7 +341,16 @@ fapp₁ f e {t} ∘f F = fapp₁ (f ∘f F )  e {t}
 fapp₂ e {v} {t} f ∘f F = fapp₂ e {v} {t} (f ∘f F)
 fnew' l f ∘f F = fnew' l (f ∘f F)
 
-
+∘f-lemma : ∀ {Δ Δ' Δ'' Γ Eff Eff' Eff'' A B C n m} → (f1 : Frame Δ Γ B Eff A Eff' Δ' n) → (f2 : Frame Δ' Γ C Eff' B Eff'' Δ''  m) → (e : RExpr) → (t : Δ'' ⨾ Γ ⊢ e ⦂ C / Eff'')
+         → plug ( f1 ∘f f2)  e t ≡ ((λ x → plug f1 (Data.Product.proj₁ x) (Data.Product.proj₂ x))(plug f2 e t))
+∘f-lemma fempty f2 e t = refl
+∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
+∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
+∘f-lemma (fnew' x f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
+{-
+--data Metaframe (Δ: TContext)
+-}
+{-
 infix 2 _↦_
 State = ℕ
 -- evaluation state, represents next label to be assigned
@@ -304,6 +386,7 @@ data _-→_ : RExpr × State → RExpr × State → Set where
     →  (e1 ,′ s) -→ (e2 ,′ s')
 
 --data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ , ∅ ⊢ e ⦂ A / Effs) → Set where
+-}
   
 {-
 decompose : ∀ {A Effs} → (e : Expr) → (∅ , ∅ ⊢ e ⦂ A / Effs) → Σ[ f ∈ Frame ]  ( Σ[ e' ∈ Expr ] (plug f e' ≡ e))
