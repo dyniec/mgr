@@ -116,7 +116,7 @@ module Runtime where
             → Δ ⊢ t2 ⦂t
             → Δ ⊢ t1 - effs > t1 ⦂t
         ⊢forall : ∀ {Δ k t}
-            → (push k Δ) ⊢ t ⦂t 
+            → (push k Δ) ⊢ t ⦂t
             → Δ ⊢ forallt k t ⦂t
         ⊢label : ∀ {Δ e t effs}
             → Δ ⊢ e ⦂e
@@ -140,15 +140,12 @@ module Runtime where
             → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
 
     data _⊢_<t⦂_ : TContext → Type → Type → Set where
-
         <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
-
         <⦂→ : ∀ {Δ A1 A2 B1 B2 E1 E2}
             → Δ ⊢ E1 <⦂ E2
             → Δ ⊢ A1 <t⦂ A2
-            → Δ ⊢ B1 <t⦂ B2 
+            → Δ ⊢ B1 <t⦂ B2
             → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
-
         <⦂forall : ∀ {Δ A1 A2 k}
             → (push k Δ) ⊢ A1 <t⦂ A2
             → Δ ⊢ forallt k A1 <t⦂ forallt k A2
@@ -252,18 +249,18 @@ module Runtime where
             → Δ ⨾ Γ ⊢ new e ⦂ A / E
             
         ⊢new' : ∀ {Γ Δ e l A E}
-            → (`e (Data.Maybe.just l) Δ)  ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E 
+            → (`e (Data.Maybe.just l) Δ)  ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
             → Δ  ⨾ Γ ⊢ new' l e ⦂ A / E
 
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
             → Δ ⊢ ttv n ⦂e
-            → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil
             → Δ ⨾ (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
             → Δ ⨾ Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
             → Δ ⊢ ttv n ⦂e
-            → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil
             → Δ ⨾ Γ   ⊢ e ⦂ A / (ttv n ∷ E')
             → Δ ⨾ (Γ , A)   ⊢ en ⦂ A' /  E'
             → Δ ⨾ Γ   ⊢ reset₀ e en e' ⦂ A' / E'
@@ -322,11 +319,11 @@ data Frame (Δ : TContext)  (Γ : Context) (T : Type) (Eff : Effects) : Type →
   -- indexed by ℕ - amount of new' constructors - means how typing context changed between hole and whole frame
   fempty : Frame Δ Γ T Eff T Eff Δ zero
   fapp₁ : ∀ {A B n Δ'  E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
-  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n 
+  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n
   fnew' : ∀ {A n Δ' E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ Γ T Eff A E Δ' (suc n)
 
 
-plug : ∀ {Δ Δ' Γ T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff) 
+plug : ∀ {Δ Δ' Γ T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
 plug fempty e t = e ,, t
 plug (fapp₁ f e₁ {te₁}) e t  with (plug f e t)
 ... | (res ,, tt) =  app res  e₁ ,, (⊢app tt te₁)
@@ -350,7 +347,6 @@ fnew' l f ∘f F = fnew' l (f ∘f F)
 {-
 --data Metaframe (Δ: TContext)
 -}
-{-
 infix 2 _↦_
 State = ℕ
 -- evaluation state, represents next label to be assigned
@@ -374,7 +370,7 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → Value v
    → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Frame Δ Γ T Eff A Eff' Δ' n } → {t : Δ' , Γ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+ Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Frame Δ Γ T Eff A Eff' Δ' n } → {t : Δ' ⨾ Γ ⊢ (shift₀ e' es) ⦂ T / Eff'}
    → (Data.Product.proj₁ (plug  f (shift₀ e' es) t)) ≡ e
    → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (plug f (var 0) t')) en e')  ]  ,′ s 
 infix 2 _-→_
@@ -386,7 +382,6 @@ data _-→_ : RExpr × State → RExpr × State → Set where
     →  (e1 ,′ s) -→ (e2 ,′ s')
 
 --data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ , ∅ ⊢ e ⦂ A / Effs) → Set where
--}
   
 {-
 decompose : ∀ {A Effs} → (e : Expr) → (∅ , ∅ ⊢ e ⦂ A / Effs) → Σ[ f ∈ Frame ]  ( Σ[ e' ∈ Expr ] (plug f e' ≡ e))
