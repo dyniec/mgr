@@ -315,7 +315,7 @@ data Frame (Δ : TContext)  (Γ : Context) (T : Type) (Eff : Effects) : Type →
   -- Eff - effects of frame - indexed with respect of whole frame
   -- indexed by Type - returned type of frame if plugged correctly
   -- indexed by Effects - effects of hole, indices respective to hole
-  -- indexed by Tcontext - typing context of the hole, should be the same as Δ + n* Kind.E
+  -- indexed by Tcontext - typing context of the hole, should be the same as n elements longer than Δ
   -- indexed by ℕ - amount of new' constructors - means how typing context changed between hole and whole frame
   fempty : Frame Δ Γ T Eff T Eff Δ zero
   fapp₁ : ∀ {A B n Δ'  E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
@@ -344,9 +344,19 @@ fnew' l f ∘f F = fnew' l (f ∘f F)
 ∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fnew' x f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
-{-
---data Metaframe (Δ: TContext)
--}
+
+data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ → Set where
+  -- Metaframe splits evaluation context into frames separated by resets
+  -- type parameters and indices work the same as in frame
+  -- since Eff can (now) grow, Eff and Effects index
+  -- might have different lenghts, and their difference (modulo debrujin indices, which difference we know thanks to ℕ index) represents list of effects handled by metaframe
+  mfempty : Metaframe Δ Γ T Eff T Eff Δ zero
+  mfreset : ∀ {Δ' A Eff' n label'} {-typing judgement...-} → Label → RExpr → Metaframe Δ Γ T (label' ∷ Eff) A Eff' Δ' n → Metaframe Δ Γ T Eff A Eff' Δ' n
+  mfframe : ∀ {A Eff' Δ' n B Eff'' Δ'' m}
+    → Frame     Δ Γ T Eff A Eff' Δ' n
+    → Metaframe Δ' Γ A Eff' B Eff'' Δ'' m
+    → Metaframe Δ Γ T Eff B  Eff'' Δ''  (n + m)
+
 infix 2 _↦_
 State = ℕ
 -- evaluation state, represents next label to be assigned
