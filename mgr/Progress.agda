@@ -351,12 +351,22 @@ data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type 
   -- since Eff can (now) grow, Eff and Effects index
   -- might have different lenghts, and their difference (modulo debrujin indices, which difference we know thanks to ℕ index) represents list of effects handled by metaframe
   mfempty : Metaframe Δ Γ T Eff T Eff Δ zero
-  mfreset : ∀ {Δ' A Eff' n label'} {-typing judgement...-} → Label → RExpr → Metaframe Δ Γ T (label' ∷ Eff) A Eff' Δ' n → Metaframe Δ Γ T Eff A Eff' Δ' n
+  mfreset : ∀ {Δ' A B Eff' n l'}
+    → (l : Label)  → Δ ⊢ ttv l' ⦂e → Δ ⨾ Γ ⊢ label l ⦂ (L ttv l' at B / Eff) / nil
+    → (e : RExpr) → (Δ ⨾ Γ , A ⊢ e ⦂ B / Eff)
+    → Metaframe Δ Γ T (ttv l' ∷ Eff) A Eff' Δ' n
+    → Metaframe Δ Γ T Eff B Eff' Δ' n
   mfframe : ∀ {A Eff' Δ' n B Eff'' Δ'' m}
-    → Frame     Δ Γ T Eff A Eff' Δ' n
-    → Metaframe Δ' Γ A Eff' B Eff'' Δ'' m
+    → Frame     Δ Γ A Eff B Eff' Δ' n
+    → Metaframe Δ' Γ T Eff' A Eff'' Δ'' m
     → Metaframe Δ Γ T Eff B  Eff'' Δ''  (n + m)
 
+mplug : ∀ {Δ Δ' Γ T Eff A n E} → Metaframe Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
+mplug mfempty e t = e ,, t
+mplug (mfreset l lt ltt e₁ x₁ f) e t with (mplug f e t)
+... | (res ,, tt) = reset₀ res e₁ (label l) ,, ⊢reset₀ lt ltt tt x₁
+mplug (mfframe x f) e t with (mplug f e t)
+... | (res ,, tt) = plug x res tt
 infix 2 _↦_
 State = ℕ
 -- evaluation state, represents next label to be assigned
