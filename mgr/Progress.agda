@@ -385,20 +385,20 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → Value (tlam k e)
    → tapp (tlam k e) T ,′ s ↦ e RExprSubst.e[t T ]  ,′ s
 
-
  β-reset₀-vl : ∀ {v e' en s}
    → Value v
    → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
 
  Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Frame Δ Γ T Eff A Eff' Δ' n } → {t : Δ' ⨾ Γ ⊢ (shift₀ e' es) ⦂ T / Eff'}
    → (Data.Product.proj₁ (plug  f (shift₀ e' es) t)) ≡ e
-   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (plug f (var 0) t')) en e')  ]  ,′ s 
+   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (plug f (var 0) t')) en e')  ]  ,′ s
+
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
-  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' Γ A T Eff Eff' t1 t2} → {f : Frame Δ Γ T Eff A Eff' Δ' n}
+  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' Γ A T Eff Eff' t1 t2} → {f : Metaframe Δ Γ T Eff A Eff' Δ' n}
     → e1' ,′ s ↦ e2' ,′ s'
-    → Data.Product.proj₁ (plug f e1' t1) ≡ e1
-    → Data.Product.proj₁ (plug f e2' t2) ≡ e2
+    → Data.Product.proj₁ (mplug f e1' t1) ≡ e1
+    → Data.Product.proj₁ (mplug f e2' t2) ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
 
 --data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ , ∅ ⊢ e ⦂ A / Effs) → Set where
