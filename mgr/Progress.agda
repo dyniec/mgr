@@ -133,11 +133,15 @@ module Runtime where
     data _⊢_<⦂_ : TContext → Effects → Effects → Set where
         Z : ∀ {Δ E}
             → Δ ⊢ E ⦂effs
-            → Δ ⊢ nil <⦂ E
+            → Δ ⊢ nil <⦂ nil
         S : ∀ {Δ e E1 E2 }
             → Δ ⊢ E1 <⦂ E2
             → Δ ⊢ e ⦂e
             → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+        S' : ∀ {Δ e E1 E2 }
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ e ⦂e
+            → Δ ⊢ E1 <⦂ (e ∷ E2)
 
     data _⊢_<t⦂_ : TContext → Type → Type → Set where
         <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
@@ -389,13 +393,13 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → Value v
    → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+ Β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' t'} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
    → (Data.Product.proj₁ (mplug  f (shift₀ e' es) t)) ≡ e
    → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (mplug f (var 0) t')) en e')  ]  ,′ s
 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
-  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' A T Eff Eff' t1 t2} → {f : Metaframe Δ T Eff A Eff' Δ' n}
+  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' A T Eff Eff' t1 t2} → (f : Metaframe Δ T Eff A Eff' Δ' n)
     → e1' ,′ s ↦ e2' ,′ s'
     → Data.Product.proj₁ (mplug f e1' t1) ≡ e1
     → Data.Product.proj₁ (mplug f e2' t2) ≡ e2
@@ -410,7 +414,6 @@ data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ ⨾ ∅ ⊢ e
   de-shift : ∀ {s Δ Δ' T Eff A n Eff' es es' e l t} 
     → (f : Metaframe Δ T Eff A Eff' Δ' n)
     →  shift₀ (label l) es' ≡ es
-    → Δ ⨾ ∅ ⊢ es ⦂ T / Eff'
     → Data.Product.proj₁ (mplug f es t) ≡ e
     --→ (e ,′ s) -→ (e2 ,′ s')
     → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
@@ -420,18 +423,21 @@ data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ ⨾ ∅ ⊢ e
     -> Value e
     → Decompose s e t
   
-  --d-simpl-redex : ∀ {Δ A Effs s}
-   --→ 
-{-
-decompose : ∀ {A Effs} → (e : Expr) → (∅ , ∅ ⊢ e ⦂ A / Effs) → Σ[ f ∈ Frame ]  ( Σ[ e' ∈ Expr ] (plug f e' ≡ e))
-decompose (lam e) (⊢lam x) =    fempty ,,  (lam e) ,, refl
-decompose (app e e₁) (⊢app x x₁) = {!!}
-decompose (tlam x e) (⊢forall x₁) = fempty ,, (tlam x e) ,, refl
-decompose (new e) (⊢new x) = fempty ,, (new e) ,, refl
-decompose (shift₀ e e₁) (⊢shift₀ x x₁ x₂) = fempty ,, (shift₀ e e₁) ,, refl
-decompose (reset₀ e e₁ e₂) (⊢reset₀ x x₁ x₂ x₃) = {!!}
-decompose (label x) (⊢label x₁ x₂) = fempty ,, (label x) ,, refl
 
+decompose : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose s e t
+decompose s (lam e) (⊢lam t) = de-val vlam
+decompose s e (⊢forall t) = de-val vLam
+decompose s e (⊢label x x₁ x₂) = de-val vlab
+--decompose s e (⊢new t) = de-simpl-redex mfempty (-→frame mfempty ↦new refl refl) (⊢new t)
+decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!{-todo lemma-}!}}  mfempty ↦new refl refl ) (⊢new t)
+decompose s e (⊢weak x x₁ x₂ t) = {!!}
+decompose s e (⊢app t t₁) = {!!}
+decompose s e (⊢tapp x t) = {!!}
+decompose s e (⊢new' t) = {!!}
+decompose s e (⊢shift₀ x t t₁) = de-shift mfempty refl {!!} (⊢shift₀ x t t₁) {!!}
+decompose s e (⊢reset₀ x t t₁ t₂) = {!!}
+
+{-
 data Progress (E : Expr) (S : State) : Set where
  step : ∀ {E' S'}
    → E ,′ S -→ E' ,′ S'

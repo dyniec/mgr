@@ -152,13 +152,17 @@ data _⊢_⦂effs where
 
 
 data _⊢_<⦂_ : TContext → Effects → Effects → Set where
-  Z : ∀ {Δ E}
-    → Δ ⊢ E ⦂effs
-    → Δ ⊢ nil <⦂ E 
-  S : ∀ {Δ e E1 E2 }
-    → Δ ⊢ E1 <⦂ E2
-    → Δ ⊢ e ⦂e
-    → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+    Z : ∀ {Δ E}
+        → Δ ⊢ E ⦂effs
+        → Δ ⊢ nil <⦂ nil
+    S : ∀ {Δ e E1 E2 }
+        → Δ ⊢ E1 <⦂ E2
+        → Δ ⊢ e ⦂e
+        → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+    S' : ∀ {Δ e E1 E2 }
+        → Δ ⊢ E1 <⦂ E2
+        → Δ ⊢ e ⦂e
+        → Δ ⊢ E1 <⦂ (e ∷ E2)
 
 nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
 nil<⦂⊥ (Z _) = refl
