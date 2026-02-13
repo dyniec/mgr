@@ -309,7 +309,7 @@ data Value : RExpr -> Set where
 
 -- typed frames
 -- it would be normally named Context, but that's taken by Context used in typing
-data Frame (Δ : TContext)  (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ →  Set where
+data Frame (Δ : TContext) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ →  Set where
   -- parametrized by: Δ Γ - typing context outside of frame
   -- T - type of the hole (deBruijn indexes of types are with respect of the hole (so well typed in Δ')
   -- Eff - effects of frame - indexed with respect of whole frame
@@ -317,13 +317,13 @@ data Frame (Δ : TContext)  (Γ : Context) (T : Type) (Eff : Effects) : Type →
   -- indexed by Effects - effects of hole, indices respective to hole
   -- indexed by Tcontext - typing context of the hole, should be the same as n elements longer than Δ
   -- indexed by ℕ - amount of new' constructors - means how typing context changed between hole and whole frame
-  fempty : Frame Δ Γ T Eff T Eff Δ zero
-  fapp₁ : ∀ {A B n Δ'  E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
-  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n
-  fnew' : ∀ {A n Δ' E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ Γ T Eff A E Δ' (suc n)
+  fempty : Frame Δ T Eff T Eff Δ zero
+  fapp₁ : ∀ {A B n Δ'  E} → Frame Δ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ ∅ ⊢ e ⦂ A / Eff  } → Frame Δ T Eff B E Δ' n
+  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ ⨾ ∅ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ T Eff A E Δ'  n  -> Frame Δ T Eff B E Δ' n
+  fnew' : ∀ {A n Δ' E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ T Eff A E Δ' (suc n)
 
 
-plug : ∀ {Δ Δ' Γ T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
+plug : ∀ {Δ Δ' T Eff A n E} → Frame Δ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ ∅ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ ∅ ⊢ res ⦂ A / Eff)
 plug fempty e t = e ,, t
 plug (fapp₁ f e₁ {te₁}) e t  with (plug f e t)
 ... | (res ,, tt) =  app res  e₁ ,, (⊢app tt te₁)
@@ -332,40 +332,40 @@ plug (fapp₂ e₁ {_} {te₁} f) e t with (plug f e t)
 plug (fnew' l f) e t with (plug f e t)
 ... | (res ,, tt) = new' l res ,, ⊢new' tt 
 
-_∘f_ : ∀ {Δ Δ' Δ'' Γ Eff Eff' Eff'' A B C n m} → Frame Δ Γ B Eff A Eff' Δ' n → Frame Δ' Γ C Eff' B Eff'' Δ''  m → Frame Δ Γ C Eff A Eff'' Δ'' (n + m)
+_∘f_ : ∀ {Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Frame Δ B Eff A Eff' Δ' n → Frame Δ' C Eff' B Eff'' Δ''  m → Frame Δ C Eff A Eff'' Δ'' (n + m)
 fempty ∘f F = F
 fapp₁ f e {t} ∘f F = fapp₁ (f ∘f F )  e {t} 
 fapp₂ e {v} {t} f ∘f F = fapp₂ e {v} {t} (f ∘f F)
 fnew' l f ∘f F = fnew' l (f ∘f F)
 
-∘f-lemma : ∀ {Δ Δ' Δ'' Γ Eff Eff' Eff'' A B C n m} → (f1 : Frame Δ Γ B Eff A Eff' Δ' n) → (f2 : Frame Δ' Γ C Eff' B Eff'' Δ''  m) → (e : RExpr) → (t : Δ'' ⨾ Γ ⊢ e ⦂ C / Eff'')
+∘f-lemma : ∀ {Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → (f1 : Frame Δ B Eff A Eff' Δ' n) → (f2 : Frame Δ' C Eff' B Eff'' Δ''  m) → (e : RExpr) → (t : Δ'' ⨾ ∅ ⊢ e ⦂ C / Eff'')
          → plug ( f1 ∘f f2)  e t ≡ ((λ x → plug f1 (Data.Product.proj₁ x) (Data.Product.proj₂ x))(plug f2 e t))
 ∘f-lemma fempty f2 e t = refl
 ∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fnew' x f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 
-data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ → Set where
+data Metaframe (Δ : TContext) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ → Set where
   -- Metaframe splits evaluation context into frames separated by resets
   -- type parameters and indices work the same as in frame
   -- since Eff can (now) grow, Eff and Effects index
   -- might have different lenghts, and their difference (modulo debrujin indices, which difference we know thanks to ℕ index) represents list of effects handled by metaframe
-  mfempty : Metaframe Δ Γ T Eff T Eff Δ zero
+  mfempty : Metaframe Δ T Eff T Eff Δ zero
   mfreset : ∀ {Δ' A B Eff' n l'}
-    → (l : Label)  → Δ ⊢ ttv l' ⦂e → Δ ⨾ Γ ⊢ label l ⦂ (L ttv l' at B / Eff) / nil
-    → (e : RExpr) → (Δ ⨾ Γ , A ⊢ e ⦂ B / Eff)
-    → Metaframe Δ Γ T (ttv l' ∷ Eff) A Eff' Δ' n
-    → Metaframe Δ Γ T Eff B Eff' Δ' n
-  mfframe : ∀ {A Eff' Δ' n B Eff'' Δ'' m}
-    → Frame     Δ Γ A Eff B Eff' Δ' n
-    → Metaframe Δ' Γ T Eff' A Eff'' Δ'' m
-    → Metaframe Δ Γ T Eff B  Eff'' Δ''  (n + m)
+    → (l : Label)  → Δ ⊢ ttv l' ⦂e → Δ ⨾ ∅ ⊢ label l ⦂ (L ttv l' at B / Eff) / nil
+    → (e : RExpr) → (Δ ⨾ ∅ , A ⊢ e ⦂ B / Eff)
+    → Metaframe Δ T (ttv l' ∷ Eff) A Eff' Δ' n
+    → Metaframe Δ T Eff B Eff' Δ' n
+  mframe : ∀ {A Eff' Δ' n B Eff'' Δ'' m}
+    → Frame     Δ  A Eff B Eff' Δ' n
+    → Metaframe Δ' T Eff' A Eff'' Δ'' m
+    → Metaframe Δ T Eff B  Eff'' Δ''  (n + m)
 
-mplug : ∀ {Δ Δ' Γ T Eff A n E} → Metaframe Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
+mplug : ∀ {Δ Δ' T Eff A n E} → Metaframe Δ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ ∅ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ ∅ ⊢ res ⦂ A / Eff)
 mplug mfempty e t = e ,, t
 mplug (mfreset l lt ltt e₁ x₁ f) e t with (mplug f e t)
 ... | (res ,, tt) = reset₀ res e₁ (label l) ,, ⊢reset₀ lt ltt tt x₁
-mplug (mfframe x f) e t with (mplug f e t)
+mplug (mframe x f) e t with (mplug f e t)
 ... | (res ,, tt) = plug x res tt
 infix 2 _↦_
 State = ℕ
@@ -389,20 +389,39 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → Value v
    → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Frame Δ Γ T Eff A Eff' Δ' n } → {t : Δ' ⨾ Γ ⊢ (shift₀ e' es) ⦂ T / Eff'}
-   → (Data.Product.proj₁ (plug  f (shift₀ e' es) t)) ≡ e
-   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (plug f (var 0) t')) en e')  ]  ,′ s
+ Β-reset₀-k : ∀ {es en e' e s n Δ Δ' Γ A T Eff Eff' t'} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+   → (Data.Product.proj₁ (mplug  f (shift₀ e' es) t)) ≡ e
+   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (mplug f (var 0) t')) en e')  ]  ,′ s
 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
-  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' Γ A T Eff Eff' t1 t2} → {f : Metaframe Δ Γ T Eff A Eff' Δ' n}
+  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' A T Eff Eff' t1 t2} → {f : Metaframe Δ T Eff A Eff' Δ' n}
     → e1' ,′ s ↦ e2' ,′ s'
     → Data.Product.proj₁ (mplug f e1' t1) ≡ e1
     → Data.Product.proj₁ (mplug f e2' t2) ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
 
---data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ , ∅ ⊢ e ⦂ A / Effs) → Set where
+data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Set where
+  de-simpl-redex : ∀ {e e2 s s' n Δ Δ' A T Eff Eff'} 
+    → (f : Metaframe Δ T Eff A Eff' Δ' n)
+    → (e ,′ s) -→ (e2 ,′ s')
+    → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
+    → Decompose s e t
+  de-shift : ∀ {s Δ Δ' T Eff A n Eff' es es' e l t} 
+    → (f : Metaframe Δ T Eff A Eff' Δ' n)
+    →  shift₀ (label l) es' ≡ es
+    → Δ ⨾ ∅ ⊢ es ⦂ T / Eff'
+    → Data.Product.proj₁ (mplug f es t) ≡ e
+    --→ (e ,′ s) -→ (e2 ,′ s')
+    → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
+    → (ts : Δ ⨾ ∅ ⊢ es ⦂ T / Eff')
+    → Decompose s e t
+  de-val : ∀ {Δ Eff A s e} → { t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff}
+    -> Value e
+    → Decompose s e t
   
+  --d-simpl-redex : ∀ {Δ A Effs s}
+   --→ 
 {-
 decompose : ∀ {A Effs} → (e : Expr) → (∅ , ∅ ⊢ e ⦂ A / Effs) → Σ[ f ∈ Frame ]  ( Σ[ e' ∈ Expr ] (plug f e' ≡ e))
 decompose (lam e) (⊢lam x) =    fempty ,,  (lam e) ,, refl
