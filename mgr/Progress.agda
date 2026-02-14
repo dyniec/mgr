@@ -4,6 +4,8 @@ module mgr.Progress where
 open import mgr.Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
 
 open import Data.Nat
+import Data.Nat.Properties
+import Relation.Binary.Definitions
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 import Data.Maybe
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
@@ -371,6 +373,20 @@ mplug (mfreset l lt ltt e₁ x₁ f) e t with (mplug f e t)
 ... | (res ,, tt) = reset₀ res e₁ (label l) ,, ⊢reset₀ lt ltt tt x₁
 mplug (mframe x f) e t with (mplug f e t)
 ... | (res ,, tt) = plug x res tt
+
+_∘m_ : ∀ {Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Metaframe Δ B Eff A Eff' Δ' n → Metaframe Δ' C Eff' B Eff'' Δ''  m → Metaframe Δ C Eff A Eff'' Δ'' (n + m)
+mfempty ∘m m2 = m2
+mfreset l x x₁ e x₂ m1 ∘m m2 = mfreset l x x₁ e x₂ (m1 ∘m m2)
+_∘m_ {n = n} {m = m'} (mframe {n = n1} {m = m''} x m1) m2 = math n1 m'' m' (mframe x (m1 ∘m m2))
+  where math : ∀ {Δ Δ' A B Eff Eff' } → ∀ (n n1 m : ℕ)→ Metaframe Δ A Eff B Eff' Δ' (n + (n1 + m)) → Metaframe Δ A Eff B Eff' Δ' (n + n1 + m)
+        math n n1 m mf rewrite Relation.Binary.PropositionalEquality.sym (Data.Nat.Properties.+-assoc n n1 m) = mf
+_f∘m_ : ∀ {Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Frame Δ B Eff A Eff' Δ' n → Metaframe Δ' C Eff' B Eff'' Δ''  m → Metaframe Δ C Eff A Eff'' Δ'' (n + m)
+f f∘m mfempty = mframe f mfempty
+f f∘m m@(mfreset l x x₁ e x₂ m') = mframe f m
+_f∘m_ {n = n} f (mframe {n = n1} {m = m1} f' m) = assoc {n = n} {n1 = n1} {m = m1} (mframe (f ∘f f') m)
+  where assoc : ∀ {Δ Δ' A B Eff Eff' n n1 m} → Metaframe Δ A Eff B Eff' Δ' (n + n1 + m) → Metaframe Δ A Eff B Eff' Δ' (n + (n1 + m))
+        assoc {n = n} { n1 = n1} {m = m} mf rewrite Data.Nat.Properties.+-assoc n n1 m = mf
+
 infix 2 _↦_
 State = ℕ
 -- evaluation state, represents next label to be assigned
