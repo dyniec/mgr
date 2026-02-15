@@ -315,18 +315,31 @@ data Value : RExpr -> Set where
 
 -- typed frames
 -- it would be normally named Context, but that's taken by Context used in typing
-data Frame (Δ : TContext) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ →  Set where
-  -- parametrized by: Δ Γ - typing context outside of frame
+data Frame (Δ : TContext) (T : Type) : Effects → Type → Effects → TContext → ℕ →  Set where
+  -- parametrized by: Δ - typing context outside of frame
   -- T - type of the hole (deBruijn indexes of types are with respect of the hole (so well typed in Δ')
   -- Eff - effects of frame - indexed with respect of whole frame
   -- indexed by Type - returned type of frame if plugged correctly
   -- indexed by Effects - effects of hole, indices respective to hole
   -- indexed by Tcontext - typing context of the hole, should be the same as n elements longer than Δ
   -- indexed by ℕ - amount of new' constructors - means how typing context changed between hole and whole frame
-  fempty : Frame Δ T Eff T Eff Δ zero
-  fapp₁ : ∀ {A B n Δ'  E} → Frame Δ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ ∅ ⊢ e ⦂ A / Eff  } → Frame Δ T Eff B E Δ' n
-  fapp₂ : ∀ {A B n Δ' E} → (e : RExpr) → { v : Value e} → { Δ ⨾ ∅ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ T Eff A E Δ'  n  -> Frame Δ T Eff B E Δ' n
-  fnew' : ∀ {A n Δ' E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ T Eff A E Δ' (suc n)
+  fempty : ∀ {Eff} → Frame Δ T Eff T Eff Δ zero
+  fapp₁ : ∀ {A B n Δ' Eff E} → Frame Δ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ ∅ ⊢ e ⦂ A / Eff  } → Frame Δ T Eff B E Δ' n
+  fapp₂ : ∀ {A B n Δ' Eff E} → (e : RExpr) → { v : Value e} → { Δ ⨾ ∅ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ T Eff A E Δ'  n  -> Frame Δ T Eff B E Δ' n
+  fnew' : ∀ {A n Δ' Eff E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ T Eff A E Δ' (suc n)
+  freset-label : ∀ {A n Δ' E l' A' Eff}
+    → (e en : RExpr)
+    → Δ ⊢ ttv l' ⦂e
+    → Δ ⨾ ∅   ⊢ e ⦂ A' / (ttv l' ∷ Eff)
+    → Δ ⨾ (∅ , A')   ⊢ en ⦂ A /  Eff
+    → Frame Δ T nil (L ttv l' at A / Eff) E Δ' n
+    → Frame Δ T Eff A E Δ' n
+  fshift-label : ∀ {A n Δ' E l' A' E'}
+    → (e : RExpr)
+            → Δ ⊢ ttv l' ⦂e
+            → Δ ⨾ (∅ , A - E' > A' )  ⊢ e ⦂ A' / E'
+    → Frame Δ T nil (L ttv l' at A' / E') E Δ' n
+    → Frame Δ T (ttv l' ∷ nil) A E Δ' n
 
 
 plug : ∀ {Δ Δ' T Eff A n E} → Frame Δ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ ∅ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ ∅ ⊢ res ⦂ A / Eff)
@@ -337,12 +350,18 @@ plug (fapp₂ e₁ {_} {te₁} f) e t with (plug f e t)
 ... | (res ,, tt ) =  app e₁ res ,, ⊢app te₁ tt
 plug (fnew' l f) e t with (plug f e t)
 ... | (res ,, tt) = new' l res ,, ⊢new' tt 
+plug (freset-label ee en x x₁ x₂ f) e t with (plug f e t)
+... | (res ,, tt) = (reset₀ ee en res) ,, ⊢reset₀ x tt x₁ x₂
+plug (fshift-label e₁ x x₁ f) e t with (plug f e t)
+... | (res ,, tt) = (shift₀ res e₁) ,, ⊢shift₀ x tt x₁
 
 _∘f_ : ∀ {Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Frame Δ B Eff A Eff' Δ' n → Frame Δ' C Eff' B Eff'' Δ''  m → Frame Δ C Eff A Eff'' Δ'' (n + m)
 fempty ∘f F = F
 fapp₁ f e {t} ∘f F = fapp₁ (f ∘f F )  e {t} 
 fapp₂ e {v} {t} f ∘f F = fapp₂ e {v} {t} (f ∘f F)
 fnew' l f ∘f F = fnew' l (f ∘f F)
+freset-label e en x x₁ x₂ f ∘f F = freset-label e en x x₁ x₂ (f ∘f F)
+fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 
 ∘f-lemma : ∀ {Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → (f1 : Frame Δ B Eff A Eff' Δ' n) → (f2 : Frame Δ' C Eff' B Eff'' Δ''  m) → (e : RExpr) → (t : Δ'' ⨾ ∅ ⊢ e ⦂ C / Eff'')
          → plug ( f1 ∘f f2)  e t ≡ ((λ x → plug f1 (Data.Product.proj₁ x) (Data.Product.proj₂ x))(plug f2 e t))
@@ -350,6 +369,8 @@ fnew' l f ∘f F = fnew' l (f ∘f F)
 ∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fnew' x f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
+∘f-lemma (freset-label ee en x x₁ x₂ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
+∘f-lemma (fshift-label e₁ x x₁ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 
 data Metaframe (Δ : TContext) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ → Set where
   -- Metaframe splits evaluation context into frames separated by resets
