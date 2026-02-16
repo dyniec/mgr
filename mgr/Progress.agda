@@ -226,22 +226,24 @@ module Runtime where
             --→ Δ ⊢ E ⦂effs
             → Δ ⨾ Γ ⊢ var x ⦂ A / E
 
-        ⊢lam : ∀ {Γ Δ e A B E}
+        ⊢lam : ∀ {Γ Δ e A B E F}
             → Δ ⨾ (Γ , A) ⊢ e ⦂ B / E
-            → Δ ⨾ Γ ⊢ lam e ⦂ A - E > B / nil
-        ⊢weak : ∀ {Γ Δ e A A' E E'}
+            → Δ ⨾ Γ ⊢ lam e ⦂ A - E > B / F
+        {-
+          ⊢weak : ∀ {Γ Δ e A A' E E'}
             → Δ ⊢ E' ⦂effs
             → Δ ⊢  A <t⦂ A'
             → Δ ⊢  E <⦂ E'
             → Δ ⨾ Γ ⊢ e ⦂ A / E
             → Δ  ⨾ Γ ⊢ e ⦂ A' / E'
+            -}
         ⊢app : ∀ {Γ Δ e1 e2 A B E}
             → Δ ⨾ Γ ⊢ e1 ⦂ A - E > B / E
             → Δ ⨾ Γ ⊢ e2 ⦂ A / E
             → Δ ⨾ Γ ⊢ app e1 e2  ⦂ B / E
-        ⊢forall : ∀ {Γ Δ e k A E}
-            → (push k Δ ) ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
-            → Δ ⨾ Γ ⊢ tlam k e ⦂ forallt k A / E
+        ⊢forall : ∀ {Γ Δ e k A E F}
+            → (push k Δ ) ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / E
+            → Δ ⨾ Γ ⊢ tlam k e ⦂ forallt k A / F
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
             → Δ ⊢ T ⦂t
@@ -269,32 +271,33 @@ module Runtime where
             → Δ ⨾ (Γ , A)   ⊢ en ⦂ A' /  E'
             → Δ ⨾ Γ   ⊢ reset₀ e en e' ⦂ A' / E'
 
-        ⊢label : ∀ {Γ Δ n l A E}
+        ⊢label : ∀ {Γ Δ n l A E F}
             → Δ ⊢ A ⦂t
-            → Δ ⊢ E ⦂effs
+            --→ Δ ⊢ E ⦂effs
             → Δ ∋l n ⦂ l
-            → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / nil
+            → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / F
+        
     module RExprSubstTyped where
-        ext-lemma : ∀ {Γ Γ' }
+        ext : ∀ {Γ Γ' }
             → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
             → (∀ {A B n} → (Γ , B) ∋ n ⦂ A → Σ[ m ∈ ℕ ] (Γ' , B) ∋ m ⦂ A)
-        ext-lemma ρ Z = zero ,, Z
-        ext-lemma ρ (S x) = suc (ρ x .proj₁) ,, S (ρ x .proj₂)
+        ext ρ Z = zero ,, Z
+        ext ρ (S x) = suc (ρ x .proj₁) ,, S (ρ x .proj₂)
 
-        rename-lemma : ∀ {Γ Γ'}
+        rename : ∀ {Γ Γ'}
             → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
             → (∀ {Δ A e E} → Δ ⨾ Γ ⊢ e ⦂ A / E →  Σ[ e' ∈ RExpr ] Δ ⨾ Γ' ⊢ e' ⦂ A / E)
-        rename-lemma ρ (⊢var { x = n } x) = (var (ρ x .proj₁)) ,, (⊢var (ρ x .proj₂) )
-        rename-lemma ρ (⊢lam x) = (lam (rename-lemma (ext-lemma ρ) x .proj₁)) ,, (⊢lam (proj₂ (rename-lemma (ext-lemma ρ) x) ) )
-        rename-lemma ρ (⊢weak x x₁ x₂ x₃) = (rename-lemma ρ x₃ .proj₁) ,, ⊢weak x x₁ x₂ (rename-lemma ρ x₃ .proj₂)
-        rename-lemma ρ (⊢app x x₁) = app (rename-lemma ρ x .proj₁) (rename-lemma ρ x₁ .proj₁) ,, ⊢app (rename-lemma ρ x .proj₂) (rename-lemma ρ x₁ .proj₂)
-        rename-lemma ρ (⊢forall {k = k} x) = tlam k (rename-lemma ρ x .proj₁) ,, ⊢forall (rename-lemma ρ x .proj₂)
-        rename-lemma ρ (⊢tapp x x₁) = tapp (rename-lemma ρ x₁ .proj₁) _ ,, ⊢tapp x (rename-lemma ρ x₁ .proj₂)
-        rename-lemma ρ (⊢new x) = new (rename-lemma (ext-lemma ρ) x .proj₁) ,, ⊢new (rename-lemma (ext-lemma ρ) x .proj₂)
-        rename-lemma ρ (⊢new' {l = l} x) = new' l (rename-lemma ρ x .proj₁) ,, ⊢new' (rename-lemma ρ x .proj₂)
-        rename-lemma ρ (⊢shift₀ x x₁ x₂) = shift₀ (rename-lemma ρ x₁ .proj₁) ( rename-lemma (ext-lemma ρ) x₂ .proj₁) ,, ⊢shift₀ x (rename-lemma ρ x₁ .proj₂) (rename-lemma (ext-lemma ρ) x₂ .proj₂)
-        rename-lemma ρ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (rename-lemma ρ x₂ .proj₁) (rename-lemma (ext-lemma ρ) x₃ .proj₁) (rename-lemma ρ x₁ .proj₁) ,, ⊢reset₀ x (rename-lemma ρ x₁ .proj₂) (rename-lemma ρ x₂ .proj₂) (rename-lemma (ext-lemma ρ) x₃ .proj₂)
-        rename-lemma ρ (⊢label x x₁ x₂) = _ ,, ⊢label x x₁ x₂
+        rename ρ (⊢var { x = n } x) = (var (ρ x .proj₁)) ,, (⊢var (ρ x .proj₂) )
+        rename ρ (⊢lam x) = (lam (rename (ext ρ) x .proj₁)) ,, (⊢lam (proj₂ (rename (ext ρ) x) ) )
+        --rename ρ (⊢weak x x₁ x₂ x₃) = (rename ρ x₃ .proj₁) ,, ⊢weak x x₁ x₂ (rename ρ x₃ .proj₂)
+        rename ρ (⊢app x x₁) = app (rename ρ x .proj₁) (rename ρ x₁ .proj₁) ,, ⊢app (rename ρ x .proj₂) (rename ρ x₁ .proj₂)
+        rename ρ (⊢forall {k = k} x) = tlam k (rename ρ x .proj₁) ,, ⊢forall (rename ρ x .proj₂)
+        rename ρ (⊢tapp x x₁) = tapp (rename ρ x₁ .proj₁) _ ,, ⊢tapp x (rename ρ x₁ .proj₂)
+        rename ρ (⊢new x) = new (rename (ext ρ) x .proj₁) ,, ⊢new (rename (ext ρ) x .proj₂)
+        rename ρ (⊢new' {l = l} x) = new' l (rename ρ x .proj₁) ,, ⊢new' (rename ρ x .proj₂)
+        rename ρ (⊢shift₀ x x₁ x₂) = shift₀ (rename ρ x₁ .proj₁) ( rename (ext ρ) x₂ .proj₁) ,, ⊢shift₀ x (rename ρ x₁ .proj₂) (rename (ext ρ) x₂ .proj₂)
+        rename ρ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (rename ρ x₂ .proj₁) (rename (ext ρ) x₃ .proj₁) (rename ρ x₁ .proj₁) ,, ⊢reset₀ x (rename ρ x₁ .proj₂) (rename ρ x₂ .proj₂) (rename (ext ρ) x₃ .proj₂)
+        rename ρ (⊢label x x₁) = _ ,, ⊢label x x₁
         postulate
             pushΔ :  ∀ {Γ Γ' Δ k}
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
@@ -305,35 +308,36 @@ module Runtime where
             tappΔ :  ∀ {Γ Γ' Δ k}
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] (push k Δ) ⨾ Γ' ⊢ e ⦂ A / E)
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
-        exts-lemma : ∀ {Γ Γ' Δ}
+        exts : ∀ {Γ Γ' Δ}
             → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
             → (∀ {n A B E} → Γ , B ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' , B ⊢ e ⦂ A / E)
-        exts-lemma ρ Z = (var zero) ,, (⊢var Z) 
-        exts-lemma ρ (S x)  = rename-lemma (λ {A = A₁} {n} z → suc n ,, S z) (ρ x .proj₂)
-        subst-lemma : ∀ {Δ Γ Γ' }
-            → (∀ {n A E } →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
+        exts ρ Z = (var zero) ,, (⊢var Z) 
+        exts ρ (S x)  = rename (λ {A = A₁} {n} z → suc n ,, S z) (ρ x .proj₂)
+        
+        subst : ∀ {Δ Γ Γ'}
+            → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
             → (∀ {e A E} → Δ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Γ'  ⊢ e ⦂ A / E)
-        subst-lemma σ (⊢var x) = σ x
-        subst-lemma σ (⊢lam x) = lam (subst-lemma (exts-lemma σ) x .proj₁) ,, ⊢lam (subst-lemma (exts-lemma σ) x .proj₂)
-        subst-lemma σ (⊢weak x x₁ x₂ x₃) = subst-lemma σ x₃ .proj₁ ,, ⊢weak x x₁ x₂ (subst-lemma σ x₃ .proj₂)
-        subst-lemma σ (⊢app x x₁) = app (subst-lemma σ x .proj₁) (subst-lemma σ x₁ .proj₁) ,, ⊢app (subst-lemma σ x .proj₂) (subst-lemma σ x₁ .proj₂)
-        subst-lemma σ (⊢forall {k = k} x) = tlam k (subst-lemma (pushΔ σ) x .proj₁) ,, ⊢forall (subst-lemma (pushΔ σ) x .proj₂)
-        subst-lemma σ (⊢tapp x x₁) = tapp (subst-lemma (tappΔ σ) x₁ .proj₁) _ ,, ⊢tapp x (subst-lemma (tappΔ σ) x₁ .proj₂)
-        subst-lemma σ (⊢new x) = new (subst-lemma (pushΔ (exts-lemma σ))  x .proj₁) ,,  ⊢new (subst-lemma (pushΔ (exts-lemma σ))  x .proj₂)
-        subst-lemma σ (⊢new' x) = new' _ (subst-lemma (eΔ σ) x .proj₁) ,, ⊢new' (subst-lemma (eΔ σ) x .proj₂)
-        subst-lemma σ (⊢shift₀ x x₁ x₂) = shift₀ (subst-lemma σ x₁ .proj₁) (subst-lemma (exts-lemma σ) x₂ .proj₁) ,, ⊢shift₀ x (subst-lemma σ x₁ .proj₂) (subst-lemma (exts-lemma σ) x₂ .proj₂)
-        subst-lemma σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst-lemma σ x₂ .proj₁) ( subst-lemma (exts-lemma σ) x₃ .proj₁) (subst-lemma σ x₁ .proj₁) ,, ⊢reset₀ x (subst-lemma σ x₁ .proj₂) (subst-lemma σ x₂ .proj₂) (subst-lemma (exts-lemma σ) x₃ .proj₂)
-        subst-lemma σ (⊢label {l = l} x x₁ x₂) = label l ,, ⊢label x x₁ x₂
+        subst σ (⊢var x) = σ x
+        subst σ (⊢lam x) = lam (subst (exts σ) x .proj₁) ,, ⊢lam (subst (exts σ) x .proj₂)
+        --subst σ (⊢weak x x₁ x₂ x₃) = subst σ x₃ .proj₁ ,, ⊢weak x x₁ x₂ (subst σ x₃ .proj₂)
+        subst σ (⊢app x x₁) = app (subst σ x .proj₁) (subst σ x₁ .proj₁) ,, ⊢app (subst σ x .proj₂) (subst σ x₁ .proj₂)
+        subst σ (⊢forall {k = k} x) = tlam k (subst (pushΔ σ) x .proj₁) ,, ⊢forall (subst (pushΔ σ) x .proj₂)
+        subst σ (⊢tapp x x₁) = tapp (subst (tappΔ σ) x₁ .proj₁) _ ,, ⊢tapp x (subst (tappΔ σ) x₁ .proj₂)
+        subst σ (⊢new x) = new (subst (pushΔ (exts σ))  x .proj₁) ,,  ⊢new (subst (pushΔ (exts σ))  x .proj₂)
+        subst σ (⊢new' x) = new' _ (subst (eΔ σ) x .proj₁) ,, ⊢new' (subst (eΔ σ) x .proj₂)
+        subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁) ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
+        subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁) ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
+        subst σ (⊢label {l = l} x x₁) = label l ,, ⊢label x x₁
 
         _[_] : ∀ {Δ Γ A B E1}
             → (e e1 : RExpr)
             → {te : Δ ⨾ Γ , A ⊢ e ⦂ B / E1}
-            → {te1 : ∀ E2 →  Δ ⨾ Γ ⊢ e1 ⦂ A / E2}
+            → {te1 : ∀ {E } → Δ ⨾ Γ ⊢ e1 ⦂ A / E}
             → Σ[ e' ∈ RExpr ] Δ ⨾ Γ ⊢ e' ⦂ B / E1
-        _[_] {Δ}{Γ}{A}{B}{E1}e e1 {te}{te1} = subst-lemma {Δ}{Γ , A}{Γ} σ  te
+        _[_] {Δ}{Γ}{A}{B}{E1}e e1 {te}{te1} = subst {Δ}{Γ , A}{Γ} σ  te
           where
             σ : (∀ {B n E} →  Γ , A ∋ n ⦂ B  → Σ[ e ∈ RExpr ] Δ ⨾ Γ ⊢ e ⦂ B / E)
-            σ{E = E'} Z = e1 ,, (te1 E')
+            σ {E = E'} Z = e1 ,, (te1 {E'})
             σ {n = suc n} (S x) = var n ,, ⊢var x 
     runtime : Expr → RExpr
     runtime (var x) = var x
@@ -369,6 +373,16 @@ data Value : RExpr -> Set where
     vlam : ∀ { e } → Value (lam e)
     vLam : ∀ { k e } → Value (tlam k e)
     vlab : ∀ { n } → Value (label n)
+gvalue : ∀ {Δ Γ T E e} → (Value e) → (Δ ⨾ Γ ⊢ e ⦂ T / E) → ∀ {F} → (Δ ⨾ Γ ⊢ e ⦂ T / F)
+--generalize value to any effect
+gvalue vlam (⊢lam t) = ⊢lam t
+gvalue vLam (⊢forall t) = ⊢forall t
+gvalue vlab (⊢label x x₁) = ⊢label x x₁
+gvalue' : ∀ {Δ Γ T E e} → (Value e) → (Δ ⨾ Γ ⊢ e ⦂ T / E)  → (Σ[ e ∈ RExpr ]  ∀ {F} → Δ ⨾ Γ ⊢ e ⦂ T / F)
+gvalue' vlam (⊢lam t) = _ ,, ⊢lam t
+gvalue' vLam (⊢forall t) = _ ,, ⊢forall t
+gvalue' vlab (⊢label x x₁) = _ ,,  ⊢label x x₁
+
 
 
 -- typed frames
@@ -475,22 +489,27 @@ data _↦_ : RExpr × State → RExpr × State → Set where
  ↦new : ∀ {e s}
   → new e ,′ s  ↦ new' s (e RExprSubst.[ label s ]) ,′ suc s
 
- β-lam-app : ∀ {e V s}
+ β-lam-app : ∀ {e V s Δ Γ A B E}
+  → {te : Δ ⨾ (Γ , A) ⊢ e ⦂ B / E}
+  → {tv : Δ ⨾ Γ ⊢ V ⦂ A / E}
   → Value (lam e)
-  → Value V
-  → app (lam e) V ,′ s ↦ e RExprSubst.[ V ] ,′ s
+  → (v : Value V)
+  → app (lam e) V ,′ s ↦ (proj₁ (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})) ,′ s
 
  β-tlam-tapp : ∀ {k e T s}
    → Value (tlam k e)
    → tapp (tlam k e) T ,′ s ↦ e RExprSubst.e[t T ]  ,′ s
 
- β-reset₀-vl : ∀ {v e' en s}
-   → Value v
-   → reset₀ v en e' ,′ s ↦ en RExprSubst.[ v ] ,′ s
+ β-reset₀-vl : ∀ {V e' en s Δ Γ A B E }
+   → ( v : Value V)
+  → {tv : Δ ⨾ Γ ⊢ V ⦂ A / E}
+  → {ten : Δ ⨾ (Γ , A) ⊢ en ⦂ B / E}
+   → reset₀ V en e' ,′ s ↦ (RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁) ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' t'} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
-   → (Data.Product.proj₁ (mplug  f (shift₀ e' es) t)) ≡ e
-   → reset₀ e en e' ,′ s ↦ es RExprSubst.[ lam (reset₀ (Data.Product.proj₁ (mplug f (var 0) t')) en e')  ]  ,′ s
+ Β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' t' B} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+   → {tes : Δ ⨾ (∅ , B) ⊢ es ⦂ T / Eff' }
+   → (proj₁ (mplug  f (shift₀ e' es) t)) ≡ e
+   → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug f (var 0) t')) en e')) {te = tes} {te1 = {! !}} .proj₁  ,′ s
 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
@@ -522,10 +541,9 @@ data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ ⨾ ∅ ⊢ e
 decompose : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose s e t
 decompose s (lam e) (⊢lam t) = de-val vlam
 decompose s e (⊢forall t) = de-val vLam
-decompose s e (⊢label x x₁ x₂) = de-val vlab
+decompose s e (⊢label x x₁) = de-val vlab
 --decompose s e (⊢new t) = de-simpl-redex mfempty (-→frame mfempty ↦new refl refl) (⊢new t)
-decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!{-todo lemma-}!}}  mfempty ↦new refl refl ) (⊢new t)
-decompose s e (⊢weak x x₁ x₂ t) = {!!}
+decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!!}}  mfempty ↦new refl refl ) (⊢new t)
 decompose s e (⊢app t t₁) = {!!}
 decompose s e (⊢tapp x t) = {!!}
 decompose s e (⊢new' t) = {!!}
