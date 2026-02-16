@@ -1,3 +1,4 @@
+```
 module mgr.Machine where
 
 open import Data.Nat
@@ -40,3 +41,4 @@ data State : Set where
   
 init : Erased → State
 init e = eval e ([] ,′ zero) (end ∷ [])
+```

@@ -1,3 +1,4 @@
+```
 module mgr.Types where
 
 open import Data.Nat
@@ -239,3 +240,4 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
+```
