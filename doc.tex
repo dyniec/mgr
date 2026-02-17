@@ -1,14 +1,10 @@
 \PassOptionsToPackage{xetex}{xcolor}
 \documentclass[shortabstract,english,mgr]{iithesis}
-\usepackage[xetex]{xcolor}
 
-\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{microtype}
 \usepackage{unicode-math}
 \setmathfont{XITS Math}
 \usepackage{src_tex/agda}
-
 
 \polishtitle    {Weryfikacja kompilatora dla języka programowania z efektami sterowania}
 \englishtitle   {Verified compiler for language with control effects}
@@ -34,10 +30,17 @@
 %\renewcommand \qedsymbol {\ensuremath{\square}}
 % ...
 %%%%%
-%\newfontfamily{\AgdaMonoFont}{JuliaMono}
-%\newfontfamily{\AgdaTypewriter}{JuliaMono}
-%\newfontfamily{\AgdaMonoFont}{JuliaMono DejaVu mononoki Symbola Droid}
-%\newfontfamily{\AgdaTypewriter}{JuliaMono DejaVu mononoki Symbola Droid}
+\renewcommand{\AgdaCodeStyle}{\tiny}
+\usepackage{fontspec}
+\setmonofont[Scale=0.9]{JuliaMono}
+\newfontfamily{\AgdaMonoFont}{JuliaMono}
+\newfontfamily{\AgdaTypewriterFont}{JuliaMono}
+\renewcommand{\AgdaSpace}{\texttt{\AgdaMonoFont{} }}
+\renewcommand{\AgdaFontStyle}[1]{{\AgdaTypewriterFont{}#1}}
+\renewcommand{\AgdaKeywordFontStyle}[1]{{\AgdaMonoFont{}#1}}
+\renewcommand{\AgdaStringFontStyle}[1]{{\AgdaMonoFont{}#1}}
+\renewcommand{\AgdaCommentFontStyle}[1]{{\AgdaTypewriterFont{}#1}}
+\renewcommand{\AgdaBoundFontStyle}[1]{\AgdaTypewriterFont{}#1}
 
 \usepackage{hyperref}
 
