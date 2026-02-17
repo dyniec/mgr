@@ -9,6 +9,7 @@ To make sure that label values bound to same type variable have same values, we 
 ```
 module Progress where
 ```
+
 \iffalse
 ```
 open import Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
@@ -21,6 +22,8 @@ open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
 
 ```
+
+
 ```
 module ExprSubst where
     Rename = ℕ → ℕ
@@ -69,6 +72,7 @@ module ExprSubst where
     _ = refl
 ```
 \fi
+Most of constructors in `RExpr` are the same as in `Expr`. Labels runtime values are represented by Natural numbers.
 
 ```
 
@@ -81,10 +85,19 @@ module Runtime where
         tlam : Kind → RExpr → RExpr
         tapp : RExpr -> Type -> RExpr
         new : RExpr → RExpr
-        new' : Label → RExpr → RExpr -- label is already assigned, keeping shape of new to prove preservation
+```
+We are using `new'` to hold allocation of labels.
+```
+        new' : Label → RExpr → RExpr
         shift₀ : RExpr → RExpr → RExpr
         reset₀ : RExpr → RExpr → RExpr → RExpr
+```
+And here we have separate term for labels. 
+```
         label : Label → RExpr -- label for effects
+```
+Typing Context are changed, because now w store labels for typing variables bound by `new'`. 
+```
     data TContext : Set where
       ∅ : TContext
       `t : TContext → TContext
@@ -119,6 +132,9 @@ module Runtime where
         ⊢ttv : ∀ {Δ n}
             → Δ ∋t n ⦂ E
             → Δ ⊢ ttv n ⦂e
+```
+\iffalse
+```
     data _⊢_⦂t : TContext → Type → Set
     data _⊢_⦂effs : TContext → Effects → Set
     data _⊢_⦂t where
@@ -146,6 +162,9 @@ module Runtime where
             → Δ ⊢ e ⦂e
             → Δ ⊢ effs ⦂effs
             → Δ ⊢ e ∷ effs ⦂effs
+```
+\fi
+```
     data _⊢_<⦂_ : TContext → Effects → Effects → Set where
         Z : ∀ {Δ}
             → Δ ⊢ nil <⦂ nil
@@ -170,47 +189,19 @@ module Runtime where
             → (push k Δ) ⊢ A1 <t⦂ A2
             → Δ ⊢ E1 <⦂ E2
             → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
+```
+
+```
     module RExprSubst where
-        Rename = ℕ → ℕ
+```
+\iffalse
 
-        Subst = ℕ → RExpr
 
-        ext : Rename → Rename 
-        ext ρ zero    = zero
-        ext ρ (suc x) = suc (ρ x)
+```
+```
+\fi
 
-        rename : Rename → (RExpr → RExpr)
-        rename ρ (var x₁) = var (ρ x₁)
-        rename ρ (lam x₁) = lam (rename (ext ρ) x₁)
-        rename ρ (app x₁ x₂) = app (rename ρ x₁) (rename ρ x₂)
-        rename ρ (tlam k x) = tlam k (rename ρ x)
-        rename ρ (tapp x₁ x₂) = tapp (rename ρ x₁)  x₂
-        rename ρ (new x₁) = new (rename (ext ρ) x₁)
-        rename ρ (new' l x₁) = new' l (rename ρ x₁)
-        rename ρ (shift₀ x₁ x₂) = shift₀ (rename ρ x₁) (rename (ext ρ) x₂)
-        rename ρ (reset₀ x₁ x₂ x₃) = reset₀ (rename ρ x₁) (rename (ext ρ) x₂) (rename ρ x₃)
-        rename ρ (label l) = label l
-
-        exts :  Subst → Subst 
-        exts ρ zero    = var zero
-        exts ρ (suc x) = rename suc (ρ x)
-
-        subst : Subst → (RExpr -> RExpr) 
-        subst ρ (var x) = ρ x
-        subst ρ (lam y) = lam (subst (exts ρ) y)
-        subst ρ (app y y₁) = app (subst ρ y) (subst ρ y₁)
-        subst ρ (tlam k x) = tlam k (subst ρ x)
-        subst ρ (tapp x₁ x₂) = tapp (subst ρ x₁) x₂
-        subst ρ (new y) = new (subst (exts ρ) y)
-        subst ρ (new' l y) = new' l (subst ρ y)
-        subst ρ (shift₀ y y₁) = shift₀ (subst ρ y)  (subst (exts ρ) y₁)
-        subst ρ (reset₀ y y₁ y₂) = reset₀ (subst ρ y) (subst (exts ρ) y₁) (subst ρ y₂)
-        subst ρ (label l) = label l
-
-        subst-zero :  RExpr  → Subst
-        subst-zero e zero    = e
-        subst-zero e (suc x) = var x
-        
+```  
         substT-in-rexpr : TypeSubst.Subst → RExpr → RExpr
         substT-in-rexpr ρ (tlam k e) = tlam k (substT-in-rexpr (TypeSubst.exts ρ) e)
         substT-in-rexpr ρ (new e) =  new (substT-in-rexpr (TypeSubst.exts ρ) e)
@@ -224,15 +215,8 @@ module Runtime where
         substT-in-rexpr ρ (reset₀ e e₁ e₂) = reset₀ (substT-in-rexpr ρ e) (substT-in-rexpr ρ e₁) (substT-in-rexpr ρ e₂)
         substT-in-rexpr ρ (label l) = label l
 
-        _[_] :  RExpr -> RExpr -> RExpr
-        M [ N ] = subst (subst-zero N) M
         _e[t_] : RExpr → Type → RExpr
         M e[t t ] = substT-in-rexpr (TypeSubst.subst-zero t) M
-
-        _ : var zero [ lam (new (var zero)) ] ≡ lam (new (var zero))
-        _ = refl
-        _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
-        _ = refl
 
 
     data _⨾_⊢_⦂_/_ : TContext → Context → RExpr → Type → Effects → Set where
@@ -266,9 +250,9 @@ module Runtime where
             → (push Kind.E Δ)  ⨾ (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
             → Δ ⨾ Γ ⊢ new e ⦂ A / E
             
-        ⊢new' : ∀ {Γ Δ e l A E}
+        ⊢new' : ∀ {Γ Δ e l A E l'}
             → (`e (Data.Maybe.just l) Δ)  ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
-            → Δ  ⨾ Γ ⊢ new' l e ⦂ A / E
+            → Δ  ⨾ Γ ⊢ new' l' e ⦂ A / E
 
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
             → Δ ⊢ ttv n ⦂e
@@ -284,8 +268,6 @@ module Runtime where
             → Δ ⨾ Γ   ⊢ reset₀ e en e' ⦂ A' / E'
 
         ⊢label : ∀ {Γ Δ n l A E F}
-            → Δ ⊢ A ⦂t
-            --→ Δ ⊢ E ⦂effs
             → Δ ∋l n ⦂ l
             → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / F
         
@@ -309,7 +291,7 @@ module Runtime where
         rename ρ (⊢new' {l = l} x) = new' l (rename ρ x .proj₁) ,, ⊢new' (rename ρ x .proj₂)
         rename ρ (⊢shift₀ x x₁ x₂) = shift₀ (rename ρ x₁ .proj₁) ( rename (ext ρ) x₂ .proj₁) ,, ⊢shift₀ x (rename ρ x₁ .proj₂) (rename (ext ρ) x₂ .proj₂)
         rename ρ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (rename ρ x₂ .proj₁) (rename (ext ρ) x₃ .proj₁) (rename ρ x₁ .proj₁) ,, ⊢reset₀ x (rename ρ x₁ .proj₂) (rename ρ x₂ .proj₂) (rename (ext ρ) x₃ .proj₂)
-        rename ρ (⊢label x x₁) = _ ,, ⊢label x x₁
+        rename ρ (⊢label x ) = _ ,, ⊢label x 
         postulate
             pushΔ :  ∀ {Γ Γ' Δ k}
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
@@ -336,7 +318,7 @@ module Runtime where
         subst σ (⊢new' x) = new' _ (subst (eΔ σ) x .proj₁) ,, ⊢new' (subst (eΔ σ) x .proj₂)
         subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁) ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
         subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁) ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
-        subst σ (⊢label {l = l} x x₁) = label l ,, ⊢label x x₁
+        subst σ (⊢label {l = l} x) = label l ,, ⊢label x
 
         _[_] : ∀ {Δ Γ A B E1}
             → (e e1 : RExpr)
@@ -386,7 +368,7 @@ gvalue : ∀ {Δ Γ T E e} → (Value e) → (Δ ⨾ Γ ⊢ e ⦂ T / E) → ∀
 --generalize value to any effect
 gvalue vlam (⊢lam t) = ⊢lam t
 gvalue vLam (⊢forall t) = ⊢forall t
-gvalue vlab (⊢label x x₁) = ⊢label x x₁
+gvalue vlab (⊢label x) = ⊢label x
 gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 
 
@@ -492,8 +474,9 @@ State = ℕ
 data _↦_ : RExpr × State → RExpr × State → Set where
 --only redexes
   
- ↦new : ∀ {e s}
-  → new e ,′ s  ↦ new' s (e RExprSubst.[ label s ]) ,′ suc s
+ ↦new : ∀ {e s Δ Γ E T A1 E1}
+  → {te : `e (Data.Maybe.just s) Δ ⨾(Γ , L ttv zero at A1 / E1)  ⊢ e ⦂ E / T}
+  → new e ,′ s  ↦ new' s ( RExprSubstTyped._[_] e (label s) {te = te} {te1 = ⊢label Z} .proj₁ ) ,′ suc s
 
  β-lam-app : ∀ {e V s Δ Γ A B E}
   → {te : Δ ⨾ (Γ , A) ⊢ e ⦂ B / E}
@@ -512,10 +495,13 @@ data _↦_ : RExpr × State → RExpr × State → Set where
   → {ten : Δ ⨾ (Γ , A) ⊢ en ⦂ B / E}
    → reset₀ V en e' ,′ s ↦ (RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁) ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' t' B} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+ Β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' t' B A' E' l'} → { f : Metaframe Δ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
    → {tes : Δ ⨾ (∅ , B) ⊢ es ⦂ T / Eff' }
+   → {te : Δ ⨾ ∅ ⊢ e ⦂ A' / (ttv l' ∷ E') }
+   → {ten : Δ ⨾ ∅ , A' ⊢ en ⦂ A / E' }
+   → {te' : Δ ⨾ ∅ ⊢ e' ⦂ (L ttv l' at A / E') /  nil }
    → (proj₁ (mplug  f (shift₀ e' es) t)) ≡ e
-   → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug f (var 0) t')) en e')) {te = tes} {te1 = {! !}} .proj₁  ,′ s
+   → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug f (var 0) t')) en e')) {te = tes} {te1 =  gvalue vlam  {!!}} .proj₁  ,′ s
 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
@@ -547,7 +533,8 @@ data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ ⨾ ∅ ⊢ e
 decompose : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose s e t
 decompose s (lam e) (⊢lam t) = de-val vlam
 decompose s e (⊢forall t) = de-val vLam
-decompose s e (⊢label x x₁) = de-val vlab
+decompose s e (⊢label x) = de-val vlab
+decompose = {!!}
 --decompose s e (⊢new t) = de-simpl-redex mfempty (-→frame mfempty ↦new refl refl) (⊢new t)
 decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!!}}  mfempty ↦new refl refl ) (⊢new t)
 decompose s e (⊢app t t₁) = {!!}

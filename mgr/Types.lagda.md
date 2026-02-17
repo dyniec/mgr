@@ -38,7 +38,7 @@ data Expr : Set where
     shift₀ : Expr → Expr → Expr
     reset₀ : Expr → Expr → Expr → Expr -- 
 ```
-`var`, `lam`, `app`, `tlam`, `tapp` are behaving as e, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured(including reset) and passed into computation under shift as variable.
+`var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured(including reset) and passed into computation under shift as variable.
 
 \iffalse
 
