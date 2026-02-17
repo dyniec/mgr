@@ -4,8 +4,15 @@ module Types where
 open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
+```
+# Syntax
 
+In this section we define syntax of the base language and types.
 
+## Kinds, Types, Effects and Expressions
+Variable and type variables are de Bruijn indices.
+
+```
 data Kind : Set where
     T : Kind
     E : Kind 
@@ -29,7 +36,13 @@ data Expr : Set where
     tapp : Expr -> Type -> Expr
     new : Expr → Expr
     shift₀ : Expr → Expr → Expr
-    reset₀ : Expr → Expr → Expr → Expr
+    reset₀ : Expr → Expr → Expr → Expr -- 
+```
+`var`, `lam`, `app`, `tlam`, `tapp` are behaving as e, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured(including reset) and passed into computation under shift as variable.
+
+\iffalse
+
+```
 module TypeSubst where
     Rename = ℕ → ℕ
     Subst = ℕ → Type
@@ -43,7 +56,6 @@ module TypeSubst where
     rename ρ (x - effs > x₁) = rename ρ x -  rename' ρ effs > rename ρ x₁
     rename ρ (forallt k x) = forallt k (rename (ext ρ) x)
     rename ρ (L x at x₁ / effs) =  L  rename ρ x at  rename ρ x₁ / rename' ρ effs
-    -- doing mutal recursion because I couldn't convice termination checker that calling map is productive
     rename' ρ nil = nil
     rename' ρ (x ∷ xs) = rename ρ x ∷ rename' ρ xs
     bump = rename suc
@@ -83,7 +95,13 @@ module TypeSubst where
     _effs[t_] : Effects → Type → Effects
     nil effs[t t ] = nil
     (x ∷ xs) effs[t t ] = (x [ t ])∷ xs effs[t t ]
+```
 
+\fi
+
+## Contexts
+Contexts are represented as list of types, and type contexts are represented as lists of kinds. Judgements for membership of types have Peano numbers structure.
+```
 infixl 5  _,_
 data Context : Set where
     ∅ : Context
@@ -94,7 +112,6 @@ data TContext : Set where
     _,_ : TContext → Kind → TContext
 
 infix  4  _∋_⦂_
-
 data _∋_⦂_ : Context → Id → Type → Set where
   Z : ∀ {Γ  A}
     → (Γ , A)  ∋ zero ⦂ A
@@ -103,14 +120,6 @@ data _∋_⦂_ : Context → Id → Type → Set where
     → Γ ∋ x ⦂ A
     → (Γ , y)  ∋ (suc x) ⦂ A
 
--- data _∋_ : Context  → Type → Set where
---   Z : ∀ {Γ  A}
---     → (Γ , A)  ∋  A
-
---   S : ∀ {Γ x y A}
---     → Γ ∋ x ⦂ A
---     → (Γ , y)  ∋  A
-
 data _∋t_⦂_ : TContext → Id → Kind → Set where
   Z : ∀ {Δ k}
     → (Δ , k)  ∋t zero ⦂ k
@@ -118,7 +127,10 @@ data _∋t_⦂_ : TContext → Id → Kind → Set where
   S : ∀ {Δ x y k}
     → Δ ∋t x ⦂ k
     → (Δ , y)  ∋t (suc x) ⦂ k
+```
+\iffalse
 
+```
 data _⊢_⦂e : TContext → Type → Set where
   ⊢ttv : ∀ {Δ n}
     → Δ ∋t n ⦂ E
@@ -149,9 +161,11 @@ data _⊢_⦂effs where
     → Δ ⊢ e ⦂e 
     → Δ ⊢ effs ⦂effs
     → Δ ⊢ e ∷ effs ⦂effs
-
-
-
+```
+\fi
+## Typing judgements
+Expressions are extrinsically typed, thus typing judgements are represented separately.
+```
 data _⊢_<⦂_ : TContext → Effects → Effects → Set where
     Z : ∀ {Δ E}
         → Δ ⊢ E ⦂effs
@@ -187,50 +201,48 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
     ⊢var : ∀ {Γ Δ x A E}
         → Γ ∋ x ⦂ A
         → Δ ⊢ E ⦂effs
+        -----------------------
         → Δ , Γ ⊢ var x ⦂ A / E
     
     ⊢lam : ∀ {Γ Δ e A B E}
         → Δ , (Γ , A) ⊢ e ⦂ B / E
+        ---------------------------------
         → Δ , Γ ⊢ lam e ⦂ A - E > B / nil
-    {-
-    ⊢app : ∀ {Γ Δ e1 e2 A1 A2 B  A'  E1 E2 E'}
-        → Δ , Γ ⊢ e1 ⦂ A1 - E1 > B / E1
-        → Δ , Γ ⊢ e2 ⦂ A2 / E2
-        → Δ ⊢ E' ⦂effs
-        → Δ ⊢ (A1 - E1 > B) <t⦂ (A' - E' > B)
-        → Δ ⊢ E1 <⦂ E' -- implied implicitly by above
-        → Δ ⊢ A2 <t⦂ A'
-        → Δ ⊢ E2 <⦂ E'
-        → Δ , Γ ⊢ app e1 e2  ⦂ B / E'
-     -}
+        
     ⊢weak : ∀ {Γ Δ e A A' E E'}
         → Δ ⊢ E' ⦂effs
         → Δ ⊢  A <t⦂ A'
         → Δ ⊢  E <⦂ E'
         → Δ , Γ ⊢ e ⦂ A / E
+        ---------------------
         → Δ , Γ ⊢ e ⦂ A' / E' 
     ⊢app : ∀ {Γ Δ e1 e2 A B E}
         → Δ , Γ ⊢ e1 ⦂ A - E > B / E
         → Δ , Γ ⊢ e2 ⦂ A / E
+        -----------------------------
         → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
                                     
     ⊢forall : ∀ {Γ Δ e k A E}
         → (Δ , k) , Γ  ⊢ e ⦂ bump A / bump' E
+        --------------------------------------
         → Δ , Γ ⊢ tlam k e ⦂ forallt k A / E
 
     ⊢tapp : ∀ {Γ Δ e k A T E}
         → Δ ⊢ T ⦂t
         → Δ , Γ ⊢ e ⦂ forallt k A / E
+        ---------------------------------------------------
         → (Δ , k) , Γ ⊢ tapp e T ⦂ A [ T ] / (E effs[t T ])
 
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
         → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ bump A / bump' E
+        -----------------------
         → Δ , Γ ⊢ new e ⦂ A / E
 
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
         → Δ ⊢ ttv n ⦂e
         → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
+        -----------------------------------------
         → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
     ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
@@ -238,6 +250,7 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
+        ------------------------------------
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
 ```

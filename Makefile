@@ -27,6 +27,8 @@ $(src_lagda_tex)/%.lagda.tex : $(SRC)/%.lagda.md pandoc/code-block.lua
 		--filter=pandoc-latex-environment \
 		--lua-filter=pandoc/code-block.lua \
 		-o $@
+	sed 's/^\\textbackslash /\\/' $@ > $@.tmp
+	mv $@.tmp $@
 
 AGDA_LATEX_OPTS:=--latex --latex-dir=$(src_tex) --include-path=$(src_lagda_tex) --only-scope-checking
 
