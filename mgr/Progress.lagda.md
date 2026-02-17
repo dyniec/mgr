@@ -1,7 +1,16 @@
+# Runtime
+Since grammar of terms, doesn't have any expression that would have type of label, and shift and reset require same labels, that would mean that reduction relation would need to go under `new` binders. Instead we will define another expression language expanded by notion of label values.
+
+When `new` expression is evaluated then all occurences of variables bound by it would have it replaced with newly allocated label value. That means evaluation would need to keep a state for allocator.
+
+Since `new` binds type variables that represent effects, and those type variables are present in typing judgements of subexpressions, complete removal of `new` during evaluation would break type preservation. Thus we introduce `new'` that just binds type variables, and stores allocated label.
+
+To make sure that label values bound to same type variable have same values, we change typing context so it stores label bound to that type variable.
 ```
 module Progress where
-
-
+```
+\iffalse
+```
 open import Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
 
 open import Data.Nat using (ℕ;zero;suc;_+_)
@@ -11,8 +20,8 @@ import Data.Maybe
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
 
-
-
+```
+```
 module ExprSubst where
     Rename = ℕ → ℕ
 
@@ -58,6 +67,10 @@ module ExprSubst where
     _ = refl
     _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
     _ = refl
+```
+\fi
+
+```
 
 module Runtime where
     Label = ℕ
