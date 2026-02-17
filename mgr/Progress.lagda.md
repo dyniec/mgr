@@ -117,9 +117,10 @@ module Runtime where
             → Δ ⊢ effs ⦂effs
             → Δ ⊢ t2 ⦂t
             → Δ ⊢ t1 - effs > t1 ⦂t
-        ⊢forall : ∀ {Δ k t}
+        ⊢forall : ∀ {Δ k t effs}
             → (push k Δ) ⊢ t ⦂t
-            → Δ ⊢ forallt k t ⦂t
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ forallt k t effs ⦂t
         ⊢label : ∀ {Δ e t effs}
             → Δ ⊢ e ⦂e
             → Δ ⊢ t ⦂t
@@ -152,9 +153,10 @@ module Runtime where
             → Δ ⊢ A1 <t⦂ A2
             → Δ ⊢ B1 <t⦂ B2
             → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
-        <⦂forall : ∀ {Δ A1 A2 k}
+        <⦂forall : ∀ {Δ A1 A2 k E1 E2}
             → (push k Δ) ⊢ A1 <t⦂ A2
-            → Δ ⊢ forallt k A1 <t⦂ forallt k A2
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
     module RExprSubst where
         Rename = ℕ → ℕ
 
@@ -224,32 +226,29 @@ module Runtime where
 
         ⊢var : ∀ {Γ Δ x A E}
             → Γ ∋ x ⦂ A
-            --→ Δ ⊢ E ⦂effs
             → Δ ⨾ Γ ⊢ var x ⦂ A / E
 
         ⊢lam : ∀ {Γ Δ e A B E F}
             → Δ ⨾ (Γ , A) ⊢ e ⦂ B / E
             → Δ ⨾ Γ ⊢ lam e ⦂ A - E > B / F
-        {-
-          ⊢weak : ∀ {Γ Δ e A A' E E'}
+        ⊢weak : ∀ {Γ Δ e A A' E E'}
             → Δ ⊢ E' ⦂effs
             → Δ ⊢  A <t⦂ A'
             → Δ ⊢  E <⦂ E'
             → Δ ⨾ Γ ⊢ e ⦂ A / E
             → Δ  ⨾ Γ ⊢ e ⦂ A' / E'
-            -}
         ⊢app : ∀ {Γ Δ e1 e2 A B E}
             → Δ ⨾ Γ ⊢ e1 ⦂ A - E > B / E
             → Δ ⨾ Γ ⊢ e2 ⦂ A / E
             → Δ ⨾ Γ ⊢ app e1 e2  ⦂ B / E
         ⊢forall : ∀ {Γ Δ e k A E F}
-            → (push k Δ ) ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / E
-            → Δ ⨾ Γ ⊢ tlam k e ⦂ forallt k A / F
+            → (push k Δ ) ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            → Δ ⨾ Γ ⊢ tlam k e ⦂ forallt k A E / F
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
             → Δ ⊢ T ⦂t
-            → Δ ⨾ Γ ⊢ e ⦂ forallt k A / E
-            → (push k Δ)  ⨾ Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
+            → Δ ⨾ Γ ⊢ e ⦂ forallt k A E / E
+            → Δ ⨾ Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 
         ⊢new : ∀ {Γ  Δ e  A A1 E E1}
             → (push Kind.E Δ)  ⨾ (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
@@ -290,7 +289,7 @@ module Runtime where
             → (∀ {Δ A e E} → Δ ⨾ Γ ⊢ e ⦂ A / E →  Σ[ e' ∈ RExpr ] Δ ⨾ Γ' ⊢ e' ⦂ A / E)
         rename ρ (⊢var { x = n } x) = (var (ρ x .proj₁)) ,, (⊢var (ρ x .proj₂) )
         rename ρ (⊢lam x) = (lam (rename (ext ρ) x .proj₁)) ,, (⊢lam (proj₂ (rename (ext ρ) x) ) )
-        --rename ρ (⊢weak x x₁ x₂ x₃) = (rename ρ x₃ .proj₁) ,, ⊢weak x x₁ x₂ (rename ρ x₃ .proj₂)
+        rename ρ (⊢weak x x₁ x₂ x₃) = (rename ρ x₃ .proj₁) ,, ⊢weak x x₁ x₂ (rename ρ x₃ .proj₂)
         rename ρ (⊢app x x₁) = app (rename ρ x .proj₁) (rename ρ x₁ .proj₁) ,, ⊢app (rename ρ x .proj₂) (rename ρ x₁ .proj₂)
         rename ρ (⊢forall {k = k} x) = tlam k (rename ρ x .proj₁) ,, ⊢forall (rename ρ x .proj₂)
         rename ρ (⊢tapp x x₁) = tapp (rename ρ x₁ .proj₁) _ ,, ⊢tapp x (rename ρ x₁ .proj₂)
@@ -320,10 +319,10 @@ module Runtime where
             → (∀ {e A E} → Δ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Γ'  ⊢ e ⦂ A / E)
         subst σ (⊢var x) = σ x
         subst σ (⊢lam x) = lam (subst (exts σ) x .proj₁) ,, ⊢lam (subst (exts σ) x .proj₂)
-        --subst σ (⊢weak x x₁ x₂ x₃) = subst σ x₃ .proj₁ ,, ⊢weak x x₁ x₂ (subst σ x₃ .proj₂)
+        subst σ (⊢weak x x₁ x₂ x₃) = subst σ x₃ .proj₁ ,, ⊢weak x x₁ x₂ (subst σ x₃ .proj₂)
         subst σ (⊢app x x₁) = app (subst σ x .proj₁) (subst σ x₁ .proj₁) ,, ⊢app (subst σ x .proj₂) (subst σ x₁ .proj₂)
         subst σ (⊢forall {k = k} x) = tlam k (subst (pushΔ σ) x .proj₁) ,, ⊢forall (subst (pushΔ σ) x .proj₂)
-        subst σ (⊢tapp x x₁) = tapp (subst (tappΔ σ) x₁ .proj₁) _ ,, ⊢tapp x (subst (tappΔ σ) x₁ .proj₂)
+        subst σ (⊢tapp x x₁) = tapp (subst σ x₁ .proj₁) _ ,, ⊢tapp x (subst σ x₁ .proj₂)
         subst σ (⊢new x) = new (subst (pushΔ (exts σ))  x .proj₁) ,,  ⊢new (subst (pushΔ (exts σ))  x .proj₂)
         subst σ (⊢new' x) = new' _ (subst (eΔ σ) x .proj₁) ,, ⊢new' (subst (eΔ σ) x .proj₂)
         subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁) ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
