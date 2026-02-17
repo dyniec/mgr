@@ -1,8 +1,17 @@
 on: push
 
 jobs:
-  nix-build:
+  agda:
     runs-on: native
     steps:
     - uses: https://data.forgejo.org/actions/checkout@v4
-    - run: nix build 
+    - run: nix build .#mgr
+  pdf:
+    runs-on: native
+    steps:
+    - uses: https://data.forgejo.org/actions/checkout@v4
+    - run: nix build .#doc
+    - uses: https://code.forgejo.org/forgejo/upload-artifact@v4 #temorary fork until v4 works
+      with:
+        name: pdf
+        path: result/doc.pdf
