@@ -134,17 +134,17 @@ module Runtime where
             → Δ ⊢ effs ⦂effs
             → Δ ⊢ e ∷ effs ⦂effs
     data _⊢_<⦂_ : TContext → Effects → Effects → Set where
-        Z : ∀ {Δ E}
-            → Δ ⊢ E ⦂effs
+        Z : ∀ {Δ}
             → Δ ⊢ nil <⦂ nil
         S : ∀ {Δ e E1 E2 }
             → Δ ⊢ E1 <⦂ E2
-            → Δ ⊢ e ⦂e
             → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
         S' : ∀ {Δ e E1 E2 }
             → Δ ⊢ E1 <⦂ E2
-            → Δ ⊢ e ⦂e
             → Δ ⊢ E1 <⦂ (e ∷ E2)
+    <⦂e-refl : ∀ {Δ E} → Δ ⊢ E <⦂ E
+    <⦂e-refl {Δ} {nil} = Z
+    <⦂e-refl {Δ} {x ∷ E₁} = S <⦂e-refl
 
     data _⊢_<t⦂_ : TContext → Type → Type → Set where
         <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
@@ -232,7 +232,6 @@ module Runtime where
             → Δ ⨾ (Γ , A) ⊢ e ⦂ B / E
             → Δ ⨾ Γ ⊢ lam e ⦂ A - E > B / F
         ⊢weak : ∀ {Γ Δ e A A' E E'}
-            → Δ ⊢ E' ⦂effs
             → Δ ⊢  A <t⦂ A'
             → Δ ⊢  E <⦂ E'
             → Δ ⨾ Γ ⊢ e ⦂ A / E
@@ -289,7 +288,7 @@ module Runtime where
             → (∀ {Δ A e E} → Δ ⨾ Γ ⊢ e ⦂ A / E →  Σ[ e' ∈ RExpr ] Δ ⨾ Γ' ⊢ e' ⦂ A / E)
         rename ρ (⊢var { x = n } x) = (var (ρ x .proj₁)) ,, (⊢var (ρ x .proj₂) )
         rename ρ (⊢lam x) = (lam (rename (ext ρ) x .proj₁)) ,, (⊢lam (proj₂ (rename (ext ρ) x) ) )
-        rename ρ (⊢weak x x₁ x₂ x₃) = (rename ρ x₃ .proj₁) ,, ⊢weak x x₁ x₂ (rename ρ x₃ .proj₂)
+        rename ρ (⊢weak x x₁ x₂ ) = (rename ρ x₂ .proj₁) ,, ⊢weak x x₁ (rename ρ x₂ .proj₂)
         rename ρ (⊢app x x₁) = app (rename ρ x .proj₁) (rename ρ x₁ .proj₁) ,, ⊢app (rename ρ x .proj₂) (rename ρ x₁ .proj₂)
         rename ρ (⊢forall {k = k} x) = tlam k (rename ρ x .proj₁) ,, ⊢forall (rename ρ x .proj₂)
         rename ρ (⊢tapp x x₁) = tapp (rename ρ x₁ .proj₁) _ ,, ⊢tapp x (rename ρ x₁ .proj₂)
@@ -305,9 +304,6 @@ module Runtime where
             eΔ :  ∀ {Γ Γ' Δ k}
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] (`e k Δ) ⨾ Γ' ⊢ e ⦂ A / E)
-            tappΔ :  ∀ {Γ Γ' Δ k}
-                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] (push k Δ) ⨾ Γ' ⊢ e ⦂ A / E)
-                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
         exts : ∀ {Γ Γ' Δ}
             → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
             → (∀ {n A B E} → Γ , B ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' , B ⊢ e ⦂ A / E)
@@ -319,7 +315,7 @@ module Runtime where
             → (∀ {e A E} → Δ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Γ'  ⊢ e ⦂ A / E)
         subst σ (⊢var x) = σ x
         subst σ (⊢lam x) = lam (subst (exts σ) x .proj₁) ,, ⊢lam (subst (exts σ) x .proj₂)
-        subst σ (⊢weak x x₁ x₂ x₃) = subst σ x₃ .proj₁ ,, ⊢weak x x₁ x₂ (subst σ x₃ .proj₂)
+        subst σ (⊢weak x x₁ x₂) = subst σ x₂ .proj₁ ,, ⊢weak x x₁ (subst σ x₂ .proj₂)
         subst σ (⊢app x x₁) = app (subst σ x .proj₁) (subst σ x₁ .proj₁) ,, ⊢app (subst σ x .proj₂) (subst σ x₁ .proj₂)
         subst σ (⊢forall {k = k} x) = tlam k (subst (pushΔ σ) x .proj₁) ,, ⊢forall (subst (pushΔ σ) x .proj₂)
         subst σ (⊢tapp x x₁) = tapp (subst σ x₁ .proj₁) _ ,, ⊢tapp x (subst σ x₁ .proj₂)
@@ -378,10 +374,7 @@ gvalue : ∀ {Δ Γ T E e} → (Value e) → (Δ ⨾ Γ ⊢ e ⦂ T / E) → ∀
 gvalue vlam (⊢lam t) = ⊢lam t
 gvalue vLam (⊢forall t) = ⊢forall t
 gvalue vlab (⊢label x x₁) = ⊢label x x₁
-gvalue' : ∀ {Δ Γ T E e} → (Value e) → (Δ ⨾ Γ ⊢ e ⦂ T / E)  → (Σ[ e ∈ RExpr ]  ∀ {F} → Δ ⨾ Γ ⊢ e ⦂ T / F)
-gvalue' vlam (⊢lam t) = _ ,, ⊢lam t
-gvalue' vLam (⊢forall t) = _ ,, ⊢forall t
-gvalue' vlab (⊢label x x₁) = _ ,,  ⊢label x x₁
+gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 
 
 
@@ -545,7 +538,7 @@ decompose s e (⊢label x x₁) = de-val vlab
 --decompose s e (⊢new t) = de-simpl-redex mfempty (-→frame mfempty ↦new refl refl) (⊢new t)
 decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!!}}  mfempty ↦new refl refl ) (⊢new t)
 decompose s e (⊢app t t₁) = {!!}
-decompose s e (⊢tapp x t) = {!!}
+--decompose s e (⊢tapp x t) = {!!}
 decompose s e (⊢new' t) = {!!}
 decompose s e (⊢shift₀ x t t₁) = de-shift mfempty refl {!!} (⊢shift₀ x t t₁) {!!}
 decompose s e (⊢reset₀ x t t₁ t₂) = {!!}
