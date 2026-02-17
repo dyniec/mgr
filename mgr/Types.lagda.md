@@ -197,7 +197,9 @@ data _⊢_<t⦂_ : TContext → Type → Type → Set where
         → (Δ , k) ⊢ A1 <t⦂ A2
         → Δ ⊢ E1 <⦂ E2
         → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
-
+```
+Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined as usual.
+```
 open TypeSubst
 data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
     ⊢var : ∀ {Γ Δ x A E}
@@ -211,12 +213,12 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ , Γ ⊢ lam e ⦂ A - E > B / F
         
     ⊢weak : ∀ {Γ Δ e A A' E E'}
-        → Δ ⊢ E' ⦂effs
         → Δ ⊢  A <t⦂ A'
         → Δ ⊢  E <⦂ E'
         → Δ , Γ ⊢ e ⦂ A / E
         ---------------------
         → Δ , Γ ⊢ e ⦂ A' / E' 
+        
     ⊢app : ∀ {Γ Δ e1 e2 A B E}
         → Δ , Γ ⊢ e1 ⦂ A - E > B / E
         → Δ , Γ ⊢ e2 ⦂ A / E
@@ -232,13 +234,18 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         → Δ ⊢ T ⦂t
         → Δ , Γ ⊢ e ⦂ forallt k A E / E
         ---------------------------------------------------
-        → (Δ , k) , Γ ⊢ tapp e T ⦂ A [ T ] / (E effs[t T ])
-
+        → Δ  , Γ ⊢ tapp e T ⦂ A [ T ] / (E effs[t T ])
+```
+`new` introduces new type variable, and variable that represent effect and label. Type of label stores type of label (here `ttv zero`). `A1` / `A2` represent type and effect of corresponding reset.
+```
     ⊢new : ∀ {Γ Δ e  A A1 E E1}
         → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ bump A / bump' E
         -----------------------
         → Δ , Γ ⊢ new e ⦂ A / E
+```
+`shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this continuation should be function type from type of shift to reset, with effects visible in reset. Since continuation passed there will have reset₀, that reset₀ will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
 
+```
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
         → Δ ⊢ ttv n ⦂e
         → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
@@ -246,11 +253,14 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         -----------------------------------------
         → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
+```
+`reset₀`  has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle value returned from first argument. And third is label, which type stores type and effects of whole expression.
+```
     ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
         → Δ ⊢ ttv n ⦂e
-        → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
         → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
+        → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
         ------------------------------------
         → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
