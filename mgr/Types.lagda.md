@@ -1,5 +1,5 @@
 ```
-module mgr.Types where
+module Types where
 
 open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)

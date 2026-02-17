@@ -190,7 +190,8 @@
 \newcommand \str@t      {\rule{0em}{1.85em}}
 \newcommand \tw@col [1] {\multicolumn{2}{@{}p{20em}}{#1}}
 
-\RequirePackage[pdftex,unicode=true]{hyperref}
+\RequirePackage[unicode=true]{hyperref}
+\RequirePackage[xetex]{xcolor}
 
 \AtBeginDocument{
   \if@pol{\selectlanguage{polish}\old@title{\bfseries\@polishtitle\mdseries}}

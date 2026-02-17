@@ -17,7 +17,12 @@
     packages.x86_64-linux.default = mgr;
     devShells.x86_64-linux.default = pkgs.mkShell{
       name = "bla";
-      buildInputs = with pkgs;[(agda.withPackages [agdaPackages.standard-library])];
+      buildInputs = with pkgs;[
+        (agda.withPackages [agdaPackages.standard-library])
+        pandoc
+	texliveFull
+	python313Packages.pandoc-latex-environment
+        ];
     };
   };
 }

@@ -1,8 +1,8 @@
 ```
-module mgr.Progress where
+module Progress where
 
 
-open import mgr.Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
+open import Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
 
 open import Data.Nat using (ℕ;zero;suc;_+_)
 import Data.Nat.Properties
@@ -349,7 +349,7 @@ module Runtime where
     runtime (new x) = new (runtime x)
     runtime (shift₀ x x₁) =  shift₀ (runtime x) (runtime x₁)
     runtime (reset₀ x x₁ x₂) = reset₀ (runtime x) (runtime x₁) (runtime x₂)
-    runtimeΔ : mgr.Types.TContext → TContext
+    runtimeΔ : Types.TContext → TContext
     runtimeΔ ∅ = ∅
     runtimeΔ (Δ , T) = `t (runtimeΔ Δ)
     runtimeΔ (Δ , E) = `e (Data.Maybe.nothing) (runtimeΔ Δ)

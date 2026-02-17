@@ -1,5 +1,5 @@
 ```
-module mgr.Machine where
+module Machine where
 
 open import Data.Nat
 open import Data.List

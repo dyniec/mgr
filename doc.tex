@@ -1,35 +1,31 @@
-% Opcje klasy 'iithesis' opisane sa w komentarzach w pliku klasy. Za ich pomoca
-% ustawia sie przede wszystkim jezyk oraz rodzaj (lic/inz/mgr) pracy.
-\documentclass[shortabstract]{iithesis}
+\PassOptionsToPackage{xetex}{xcolor}
+\documentclass[shortabstract,english,mgr]{iithesis}
+\usepackage[xetex]{xcolor}
 
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{unicode-math}
+\setmathfont{XITS Math}
+\usepackage{src_tex/agda}
 
-%%%%% DANE DO STRONY TYTUĹOWEJ
-% Niezaleznie od jezyka pracy wybranego w opcjach klasy, tytul i streszczenie
-% pracy nalezy podac zarowno w jezyku polskim, jak i angielskim.
-% Pamietaj o madrym (zgodnym z logicznym rozbiorem zdania oraz estetyka) recznym
-% zlamaniu wierszy w temacie pracy, zwlaszcza tego w jezyku pracy. Uzyj do tego
-% polecenia \fmlinebreak.
-\polishtitle    {WymagajÄcy zĹamania wierszy\fmlinebreak tytuĹ pracy w~jÄzyku polskim}
-\englishtitle   {English title}
+
+\polishtitle    {Weryfikacja kompilatora dla języka programowania z efektami sterowania}
+\englishtitle   {Verified compiler for language with control effects}
 \polishabstract {\ldots}
 \englishabstract{\ldots}
-% w pracach wielu autorow nazwiska mozna oddzielic poleceniem \and
-\author         {Maksymilian DebeĹciak}
-% w przypadku kilku promotorow, lub koniecznosci podania ich afiliacji, linie
-% w ponizszym poleceniu mozna zlamac poleceniem \fmlinebreak
-\advisor        {dr Jan Kowalski}
+\author         {Paweł Dybiec}
+\advisor        {dr Piotr Polesiuk}
 %\date          {}                     % Data zlozenia pracy
 % Dane do oswiadczenia o autorskim wykonaniu
-%\transcriptnum {}                     % Numer indeksu
-%\advisorgen    {dr. Jana Kowalskiego} % Nazwisko promotora w dopelniaczu
+\transcriptnum {271900}                     % Numer indeksu
+%\advisorgen    { } % Nazwisko promotora w dopelniaczu
 %%%%%
 
 %%%%% WLASNE DODATKOWE PAKIETY
 %
 %\usepackage{graphicx,listings,amsmath,amssymb,amsthm,amsfonts,tikz}
 %
-%%%%% WĹASNE DEFINICJE I POLECENIA
 %
 %\theoremstyle{definition} \newtheorem{definition}{Definition}[chapter]
 %\theoremstyle{remark} \newtheorem{remark}[definition]{Observation}
@@ -38,12 +34,17 @@
 %\renewcommand \qedsymbol {\ensuremath{\square}}
 % ...
 %%%%%
+%\newfontfamily{\AgdaMonoFont}{JuliaMono}
+%\newfontfamily{\AgdaTypewriter}{JuliaMono}
+%\newfontfamily{\AgdaMonoFont}{JuliaMono DejaVu mononoki Symbola Droid}
+%\newfontfamily{\AgdaTypewriter}{JuliaMono DejaVu mononoki Symbola Droid}
+
+\usepackage{hyperref}
 
 \begin{document}
 
-%%%%% POCZÄTEK ZASADNICZEGO TEKSTU PRACY
 
-\chapter{Wprowadzenie}
+%\chapter{Wprowadzenie}
 
 \ldots
 
@@ -52,5 +53,10 @@
 %\begin{thebibliography}{1}
 %\bibitem{example} \ldots
 %\end{thebibliography}
+
+\input{src_tex/Types}
+\input{src_tex/Progress}
+\input{src_tex/Machine}
+
 
 \end{document}
