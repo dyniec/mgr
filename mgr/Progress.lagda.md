@@ -18,7 +18,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 import Data.Nat.Properties
 ```
 \fi
-Definition of values. Only abstractions, type abstractions and labels are considered values.
+Here we define values. Only abstractions, type abstractions and labels are considered values.
 Since values themself don't perform any effects, they have `nil` effect. But rules for all of
 them have built-in weakinging. We can use that to generalize their type and perform substiution
 where any effect is expected.
@@ -109,6 +109,8 @@ fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 ```
 \fi
 We can prove how plugging and composition relate.
+Plugging expression into one frame and another results in same value and type
+as plugging expression into composition of two frames.
 ```
 ∘f-lemma : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m}
   → (f1 : Frame Δ Γ B Eff A Eff' Δ' n)
@@ -140,7 +142,7 @@ Metaframe stores whole evaluation context, it's split into frames separated by r
 Type parameters and indices work the same as in frame.
 Unlike in frame, metaframe now stores resets, so lists of effects inside and outside  of frame
 may differ. That means their difference represents list of effects handled by the frame.
-This observation can be used to prove that for well typed expression(in empty typing context, and with condition that same labels have the same type) that decomposes into
+This observation can be used to prove that for well typed expression (in empty typing context, and with condition that same labels have the same type) that decomposes into
 metaframe and `shift₀` expression, and metaframe should handle effect of the `shift`.
 Also this metaframe decomposes into two metaframes separated by `reset₀` which is has same label.
 ```
@@ -253,7 +255,8 @@ data _↦_ : RExpr × State → RExpr × State → Set where
        {te = tes} {te1 = gvalue {E = Eff} vlam cont-type}
        .proj₁  ,′ s
 ```
- Since ↦ is defined on redexes, we introduce -→ that represents reduction within frame.
+ Since simple reduction above is defined directly on redexes, we introduce -→ that represents reduction within metaframe.
+ As we are only considering whole typed expressions, in place of `Γ` we use empty context. 
 ```
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
