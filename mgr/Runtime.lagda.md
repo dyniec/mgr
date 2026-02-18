@@ -1,5 +1,5 @@
 # Runtime
-Since grammar of terms, doesn't have any expression that would have type of label, and shift and reset require same labels, that would mean that reduction relation would need to go under `new` binders. Instead we will define another expression language expanded by notion of label values.
+Since grammar of terms doesn't have any expression that would have type of label, and shift and reset require same labels, that would mean that reduction relation would need to go under `new` binders. Instead we will define another expression language expanded by notion of label values.
 
 When `new` expression is evaluated then all occurences of variables bound by it would have it replaced with newly allocated label value. That means evaluation would need to keep a state for allocator.
 
@@ -93,7 +93,8 @@ And here we have separate term for labels.
 ```
         label : Label → RExpr -- label for effects
 ```
-Typing Context are changed, because now w store labels for typing variables bound by `new'`. 
+Typing Context now has different representation, because we store labels for typing variables bound by `new'`.
+Thus all of judgements using them need to be redefined for the runtime language.
 ```
     data TContext : Set where
       ∅ : TContext
@@ -280,7 +281,8 @@ To prove prove safety we need to add extra conditions on label expressions. That
             → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / F
 ```
 # Runtime embedding
-Embedding of original language in current one. Part of proof is skipped as it goes through almost all judgement types.
+We defined embedding of original language in current one, and proof that such embedding preserves typing judgements.
+Part of proof is skipped as it goes through almost all judgement types.
 ```
     runtime : Expr → RExpr
     runtime (var x) = var x
@@ -372,7 +374,7 @@ Small lemma about concatenating context and that it keeps type safety.
     e↑ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ x (e↑ t) (e↑ t₁) (e↑ t₂)
     e↑ (⊢label x) = ⊢label x
 ```
-Substitution and proof relating typing judgement of inputs and result
+Substitution and proof relating typing judgement of inputs and result are defined together inductively.
 ```
     module RExprSubstTyped where
         ext : ∀ {Γ Γ' }
@@ -391,10 +393,14 @@ Substitution and proof relating typing judgement of inputs and result
         rename ρ (⊢forall {k = k} x) = tlam k (rename ρ x .proj₁) ,, ⊢forall (rename ρ x .proj₂)
         rename ρ (⊢tapp x x₁) = tapp (rename ρ x₁ .proj₁) _ ,, ⊢tapp x (rename ρ x₁ .proj₂)
         rename ρ (⊢new x) = new (rename (ext ρ) x .proj₁) ,, ⊢new (rename (ext ρ) x .proj₂)
-        rename ρ (⊢new' {l = l} x) = new' l (rename ρ x .proj₁) ,, ⊢new' (rename ρ x .proj₂)
-        rename ρ (⊢shift₀ x x₁ x₂) = shift₀ (rename ρ x₁ .proj₁) ( rename (ext ρ) x₂ .proj₁) ,, ⊢shift₀ x (rename ρ x₁ .proj₂) (rename (ext ρ) x₂ .proj₂)
-        rename ρ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (rename ρ x₂ .proj₁) (rename (ext ρ) x₃ .proj₁) (rename ρ x₁ .proj₁) ,, ⊢reset₀ x (rename ρ x₁ .proj₂) (rename ρ x₂ .proj₂) (rename (ext ρ) x₃ .proj₂)
-        rename ρ (⊢label x ) = _ ,, ⊢label x 
+        rename ρ (⊢new' {l = l} x) = new' l (rename ρ x .proj₁)
+          ,, ⊢new' (rename ρ x .proj₂)
+        rename ρ (⊢shift₀ x x₁ x₂) = shift₀ (rename ρ x₁ .proj₁) ( rename (ext ρ) x₂ .proj₁)
+          ,, ⊢shift₀ x (rename ρ x₁ .proj₂) (rename (ext ρ) x₂ .proj₂)
+        rename ρ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (rename ρ x₂ .proj₁) (rename (ext ρ) x₃ .proj₁) (rename ρ x₁ .proj₁)
+          ,,
+          ⊢reset₀ x (rename ρ x₁ .proj₂) (rename ρ x₂ .proj₂) (rename (ext ρ) x₃ .proj₂)
+        rename ρ (⊢label x ) = _ ,, ⊢label x
         postulate
             pushΔ :  ∀ {Γ Γ' Δ k}
                 → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
@@ -417,10 +423,14 @@ Substitution and proof relating typing judgement of inputs and result
         subst σ (⊢app x x₁) = app (subst σ x .proj₁) (subst σ x₁ .proj₁) ,, ⊢app (subst σ x .proj₂) (subst σ x₁ .proj₂)
         subst σ (⊢forall {k = k} x) = tlam k (subst (pushΔ σ) x .proj₁) ,, ⊢forall (subst (pushΔ σ) x .proj₂)
         subst σ (⊢tapp x x₁) = tapp (subst σ x₁ .proj₁) _ ,, ⊢tapp x (subst σ x₁ .proj₂)
-        subst σ (⊢new x) = new (subst (pushΔ (exts σ))  x .proj₁) ,,  ⊢new (subst (pushΔ (exts σ))  x .proj₂)
-        subst σ {e = new' l _}(⊢new' x) = new' l (subst (eΔ σ) x .proj₁) ,, ⊢new' (subst (eΔ σ) x .proj₂)
-        subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁) ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
-        subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁) ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
+        subst σ (⊢new x) = new (subst (pushΔ (exts σ))  x .proj₁)
+          ,,  ⊢new (subst (pushΔ (exts σ))  x .proj₂)
+        subst σ {e = new' l _}(⊢new' x) = new' l (subst (eΔ σ) x .proj₁)
+          ,, ⊢new' (subst (eΔ σ) x .proj₂)
+        subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁)
+          ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
+        subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁)
+          ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
         subst σ (⊢label {l = l} x) = label l ,, ⊢label x
 
         _[_] : ∀ {Δ Γ A B E1}

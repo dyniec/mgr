@@ -19,8 +19,8 @@ import Data.Nat.Properties
 ```
 \fi
 Definition of values. Only abstractions, type abstractions and labels are considered values.
-Since values themself dont perform any effects, they have `nil` effect. But rules for all of
-them have builtin weakinging. We can use that to generalize their type and perform substiution
+Since values themself don't perform any effects, they have `nil` effect. But rules for all of
+them have built-in weakinging. We can use that to generalize their type and perform substiution
 where any effect is expected.
 ```
 data Value : RExpr -> Set where
@@ -46,8 +46,11 @@ Frames here are intrinsically typed, thus they also store type judgements of sub
 data Frame (Δ : TContext) (Γ : Context) (T : Type) : Effects → Type → Effects → TContext → ℕ →  Set where
   fempty : ∀ {Eff} → Frame Δ Γ T Eff T Eff Δ zero
   fapp₁ : ∀ {A B n Δ' Eff E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
-  fapp₂ : ∀ {A B n Δ' Eff E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff } -> Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n
-  fnew' : ∀ {A n Δ' Eff E} → (l : Label) → Frame (`e (Data.Maybe.just l) Δ) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n → Frame Δ Γ T Eff A E Δ' (suc n)
+  fapp₂ : ∀ {A B n Δ' Eff E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff }
+    → Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n
+  fnew' : ∀ {A n Δ' Eff E} → (l : Label)
+    → Frame (`e (Data.Maybe.just l) Δ) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n
+    → Frame Δ Γ T Eff A E Δ' (suc n)
   freset-label : ∀ {A n Δ' E l' A' Eff}
     → (e en : RExpr)
     → Δ ⊢ ttv l' ⦂e
@@ -65,8 +68,14 @@ data Frame (Δ : TContext) (Γ : Context) (T : Type) : Effects → Type → Effe
 ```
 Frame plugging and composition:
 ```
-plug : ∀ {Δ Δ' Γ  T Eff A n E} → Frame Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
-_∘f_ : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Frame Δ Γ B Eff A Eff' Δ' n → Frame Δ' Γ C Eff' B Eff'' Δ''  m → Frame Δ Γ C Eff A Eff'' Δ'' (n + m)
+plug : ∀ {Δ Δ' Γ  T Eff A n E}
+  → Frame Δ Γ T Eff A E Δ' n
+  → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E
+  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
+_∘f_ : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m}
+  → Frame Δ Γ B Eff A Eff' Δ' n
+  → Frame Δ' Γ C Eff' B Eff'' Δ''  m
+  → Frame Δ Γ C Eff A Eff'' Δ'' (n + m)
 ```
 \iffalse
 ```
@@ -89,10 +98,14 @@ freset-label e en x x₁ x₂ f ∘f F = freset-label e en x x₁ x₂ (f ∘f F
 fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 ```
 \fi
-We can prove how plugging and composition relate
+We can prove how plugging and composition relate.
 ```
-∘f-lemma : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → (f1 : Frame Δ Γ B Eff A Eff' Δ' n) → (f2 : Frame Δ' Γ C Eff' B Eff'' Δ''  m) → (e : RExpr) → (t : Δ'' ⨾ Γ ⊢ e ⦂ C / Eff'')
-         → plug ( f1 ∘f f2)  e t ≡ ((λ x → plug f1 (Data.Product.proj₁ x) (Data.Product.proj₂ x))(plug f2 e t))
+∘f-lemma : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m}
+  → (f1 : Frame Δ Γ B Eff A Eff' Δ' n)
+  → (f2 : Frame Δ' Γ C Eff' B Eff'' Δ''  m)
+  → (e : RExpr) → (t : Δ'' ⨾ Γ ⊢ e ⦂ C / Eff'')
+  → plug ( f1 ∘f f2)  e t
+  ≡ ((λ x → plug f1 (Data.Product.proj₁ x) (Data.Product.proj₂ x))(plug f2 e t))
          
 ∘f-lemma fempty f2 e t = refl
 ∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
@@ -121,7 +134,8 @@ This observation can be used to prove that for well typed expression(in empty ty
 metaframe and `shift₀` expression, and metaframe should handle effect of the `shift`.
 Also this metaframe decomposes into two metaframes separated by `reset₀` which is has same label.
 ```
-data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ → Set where
+data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects)
+  : Type → Effects → TContext → ℕ → Set where
   mfempty : Metaframe Δ Γ T Eff T Eff Δ zero
   mfreset : ∀ {Δ' A B Eff' n l'}
     → (l : Label)  → Δ ⊢ ttv l' ⦂e → Δ ⨾ Γ ⊢ label l ⦂ (L ttv l' at B / Eff) / nil
@@ -133,15 +147,24 @@ data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type 
     → Metaframe Δ' Γ T Eff' A Eff'' Δ'' m
     → Metaframe Δ  Γ T Eff  B Eff'' Δ'' (n + m)
 ```
-Metaframes same as frames, can be lifted into arbitrary contexts, plugged  and composed.
+Metaframes, same as frames, can be lifted into arbitrary contexts, plugged  and composed.
 They can also be composed with simple frames
 ```
 ↑m : forall { Δ A B Eff Eff' Δ' n Γ' Γ}
   → Metaframe Δ  Γ      A Eff B Eff' Δ' n
   → Metaframe Δ (Γ' ⧺ Γ) A Eff B Eff' Δ' n
-mplug : ∀ {Γ Δ Δ' T Eff A n E} → Metaframe Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
-_∘m_ : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Metaframe Δ Γ B Eff A Eff' Δ' n → Metaframe Δ' Γ C Eff' B Eff'' Δ''  m → Metaframe Δ Γ C Eff A Eff'' Δ'' (n + m)
-_f∘m_ : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m} → Frame Δ Γ B Eff A Eff' Δ' n → Metaframe Δ' Γ C Eff' B Eff'' Δ''  m → Metaframe Δ Γ C Eff A Eff'' Δ'' (n + m)
+mplug : ∀ {Γ Δ Δ' T Eff A n E}
+  → Metaframe Δ Γ T Eff A E Δ' n
+  → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E
+  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
+_∘m_ : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m}
+  → Metaframe Δ Γ B Eff A Eff' Δ' n
+  → Metaframe Δ' Γ C Eff' B Eff'' Δ''  m
+  → Metaframe Δ Γ C Eff A Eff'' Δ'' (n + m)
+_f∘m_ : ∀ {Γ Δ Δ' Δ'' Eff Eff' Eff'' A B C n m}
+  → Frame Δ Γ B Eff A Eff' Δ' n
+  → Metaframe Δ' Γ C Eff' B Eff'' Δ''  m
+  → Metaframe Δ Γ C Eff A Eff'' Δ'' (n + m)
 ```
 \iffalse
 ```
@@ -212,7 +235,11 @@ data _↦_ : RExpr × State → RExpr × State → Set where
    → {tlr : Δ ⨾ ∅ ⊢ e' ⦂ (L ttv lr at T / Eff) /  nil }
    → {tlvr : Δ  ⊢  ttv lr ⦂e }
    → (proj₁ (mplug  f (shift₀ e' es) ts)) ≡ e
-   → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z))) en e')) {te = tes} {te1 = gvalue {E = Eff} vlam cont-type} .proj₁  ,′ s
+   → reset₀ e en e' ,′ s
+     ↦ RExprSubstTyped._[_] es
+       (lam (reset₀ (proj₁ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z))) en e'))
+       {te = tes} {te1 = gvalue {E = Eff} vlam cont-type}
+       .proj₁  ,′ s
 ```
  Since ↦ is defined on redexes, we introduce -→ that represents reduction within frame.
 ```
@@ -253,8 +280,8 @@ data Progress : State → RExpr → Set where
 
 Proof of progress would have a type of
 `progress : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Progress s e`.
-In such proof I would use auxiliary struct `Decompose` which builder would  walk down well typed expression recursively
-until it has reached either value, simple reduction (app, tapp, new), or shift,and return it with surrounding metaframe.
+In such proof We would use auxiliary struct `Decompose` which builder would  walk down well typed expression recursively
+until it has reached either value, simple reduction (app, tapp, new), or shift, and return it with surrounding metaframe.
 
 In case of shift, such metaframe by construction should have effect handler that has same effect as shift. So
 we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in

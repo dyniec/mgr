@@ -38,7 +38,7 @@ data Expr : Set where
     shift₀ : Expr → Expr → Expr
     reset₀ : Expr → Expr → Expr → Expr -- 
 ```
-`var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured(including reset) and passed into computation under shift as variable.
+`var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured (including reset) and passed into computation under shift as variable.
 
 Type substitution in types is removed for brevity. It's available in accompanying repository.
 
@@ -242,7 +242,7 @@ data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set 
         -----------------------
         → Δ , Γ ⊢ new e ⦂ A / E
 ```
-`shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this continuation should be function type from type of shift to reset, with effects visible in reset. Since continuation passed there will have reset₀, that reset₀ will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
+`shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this continuation should be function type from type of shift to reset, with effects visible in reset. Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
 
 ```
     ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}

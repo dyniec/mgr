@@ -12,7 +12,7 @@ open import Data.Maybe using (Maybe)
 \fi
 Here we define type erased expressions. And translation from previous `RExpr` type.
 Type abstraction is translated to normal abstraction, and type application is translated to application
-of identity function(it's not used).
+of identity function (it won't be used regardless of value).
 ```
 data Erased : Set where
   var : ℕ → Erased
