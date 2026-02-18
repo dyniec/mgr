@@ -314,9 +314,12 @@ Part of proof is skipped as it goes through almost all judgement types.
     runtime⊢effs : ∀ {Δ T}
       → Δ Types.⊢ T ⦂effs → (runtimeΔ Δ) ⊢ T ⦂effs
     runtime⊢t (⊢ttv x) = ⊢ttv (runtime∋t x)
-    runtime⊢t (⊢-> x x₁ x₂) = ⊢-> (runtime⊢t x) (runtime⊢effs x₁) (runtime⊢t x)
-    runtime⊢t (⊢forall x x₁) = ⊢forall (runtime⊢t x) (runtime⊢effs x₁)
-    runtime⊢t (⊢label x x₁ x₂) = ⊢label (runtime⊢e x) (runtime⊢t x₁) (runtime⊢effs x₂)
+    runtime⊢t (⊢-> x x₁ x₂) = ⊢-> (runtime⊢t x)
+      (runtime⊢effs x₁) (runtime⊢t x)
+    runtime⊢t (⊢forall x x₁) = ⊢forall (runtime⊢t x)
+      (runtime⊢effs x₁)
+    runtime⊢t (⊢label x x₁ x₂) = ⊢label (runtime⊢e x)
+      (runtime⊢t x₁) (runtime⊢effs x₂)
     runtime⊢effs ⊢nil = ⊢nil
     runtime⊢effs (⊢cons x x₁) = ⊢cons (runtime⊢e x) (runtime⊢effs x₁)
     runtime<⦂ : ∀ {Δ E1 E2}
@@ -329,23 +332,25 @@ Part of proof is skipped as it goes through almost all judgement types.
       → Δ Types.⊢ T1 <t⦂ T2
       → (runtimeΔ Δ) ⊢ T1 <t⦂ T2
     runtime<t⦂ <⦂refl = <⦂refl
-    runtime<t⦂ (<⦂→ x x₁ x₂) = <⦂→ (runtime<⦂ x) (runtime<t⦂ x₁) (runtime<t⦂ x₂)
-    runtime<t⦂ (<⦂forall x x₁) = <⦂forall (runtime<t⦂ x) (runtime<⦂ x₁)
+    runtime<t⦂ (<⦂→ x x₁ x₂) = <⦂→ (runtime<⦂ x)
+      (runtime<t⦂ x₁) (runtime<t⦂ x₂)
+    runtime<t⦂ (<⦂forall x x₁) = <⦂forall
+      (runtime<t⦂ x) (runtime<⦂ x₁)
 ```
 \fi
 
 ```
     runtime-types : ∀ {Δ Γ  e T E}
       → Δ , Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ Γ ⊢ (runtime e) ⦂ T / E)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢var x) = ⊢var x
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢lam t) = ⊢lam (runtime-types t)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢weak x x₁ t) = ⊢weak (runtime<t⦂ x) (runtime<⦂ x₁) (runtime-types t)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢app t t₁) = ⊢app (runtime-types t) (runtime-types t₁)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢forall t) = ⊢forall (runtime-types t)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢tapp x t) = ⊢tapp (runtime⊢t x) (runtime-types t)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢new t) = ⊢new (runtime-types t)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢shift₀ x t t₁) = ⊢shift₀ ((runtime⊢e x)) (runtime-types t) (runtime-types t₁)
-    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (runtime⊢e x) (runtime-types t₂) (runtime-types t) (runtime-types t₁)
+    runtime-types (⊢var x) = ⊢var x
+    runtime-types (⊢lam t) = ⊢lam (runtime-types t)
+    runtime-types (⊢weak x x₁ t) = ⊢weak (runtime<t⦂ x) (runtime<⦂ x₁) (runtime-types t)
+    runtime-types (⊢app t t₁) = ⊢app (runtime-types t) (runtime-types t₁)
+    runtime-types (⊢forall t) = ⊢forall (runtime-types t)
+    runtime-types (⊢tapp x t) = ⊢tapp (runtime⊢t x) (runtime-types t)
+    runtime-types (⊢new t) = ⊢new (runtime-types t)
+    runtime-types (⊢shift₀ x t t₁) = ⊢shift₀ ((runtime⊢e x)) (runtime-types t) (runtime-types t₁)
+    runtime-types (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (runtime⊢e x) (runtime-types t₂) (runtime-types t) (runtime-types t₁)
         
 ```
 Small lemma about lifting context and that it keeps type safety.
