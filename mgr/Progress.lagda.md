@@ -250,6 +250,7 @@ data Progress : State → RExpr → Set where
     → Progress s1 e1
 
 ```
+
 Proof of progress would have a type of
 `progress : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Progress s e`.
 In such proof I would use auxiliary struct `Decompose` which builder would  walk down well typed expression recursively
@@ -262,6 +263,7 @@ context.
 ## Preservation
 Current definition of reduction relation would yield proof of preservation immediately if progress was given since, frames and expressions are well typed,
 and reduction relation requires proofs to plug into metaframes or subsitution.
+
 \iffalse
 ```
 {-
