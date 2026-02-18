@@ -18,15 +18,16 @@ data Kind : Set where
     E : Kind 
 Id : Set
 Id = ℕ
-
-data Type : Set
-Effects : Set
-data Type  where
-    ttv : Id → Type
-    _-_>_ : Type → Effects → Type → Type
-    forallt : Kind → Type → Effects →  Type
-    L_at_/_ : Type → Type → Effects → Type
-Effects = List Type
+module Types where
+    data Type : Set
+    Effects : Set
+    data Type  where
+        ttv : Id → Type
+        _-_>_ : Type → Effects → Type → Type
+        forallt : Kind → Type → Effects →  Type
+        L_at_/_ : Type → Type → Effects → Type
+    Effects = List Type
+open Types
 
 data Expr : Set where
     var : ℕ → Expr
