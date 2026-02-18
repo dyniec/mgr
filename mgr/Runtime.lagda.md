@@ -15,7 +15,6 @@ module Runtime where
 open import Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
 
 open import Data.Nat using (ℕ;zero;suc;_+_)
-import Data.Nat.Properties
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
@@ -280,7 +279,7 @@ To prove prove safety we need to add extra conditions on label expressions. That
             --------------------------------------------
             → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / F
 ```
-## Runtime embedding
+# Runtime embedding
 Embedding of original language in current one. Part of proof is skipped as it goes through almost all judgement types.
 ```
     runtime : Expr → RExpr

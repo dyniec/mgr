@@ -5,11 +5,10 @@ open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 ```
-# Syntax
 
 In this section we define syntax of the base language and types.
 
-## Kinds, Types, Effects and Expressions
+# Kinds, Types, Effects and Expressions
 Variable and type variables are de Bruijn indices.
 
 ```
@@ -102,7 +101,7 @@ module TypeSubst where
 
 \fi
 
-## Contexts
+# Contexts
 Contexts are represented as list of types, and type contexts are represented as lists of kinds. Judgements for membership of types have Peano numbers structure.
 ```
 infixl 5  _,_
@@ -167,7 +166,7 @@ data _⊢_⦂effs where
     → Δ ⊢ e ∷ effs ⦂effs
 ```
 \fi
-## Typing judgements
+# Typing judgements
 Expressions are extrinsically typed, thus typing judgements are represented separately.
 ```
 data _⊢_<⦂_ : TContext → Effects → Effects → Set where
