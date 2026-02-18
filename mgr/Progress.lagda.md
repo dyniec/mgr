@@ -270,6 +270,30 @@ Typing Context are changed, because now w store labels for typing variables boun
         ⊢label : ∀ {Γ Δ n l A E F}
             → Δ ∋l n ⦂ l
             → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / F
+    _⧺_ : Context → Context → Context
+    y ⧺ ∅ = y
+    y ⧺ (xs , x) = (y ⧺ xs) , x
+    ∋↑ : ∀ {Γ x A Γ'}
+      → Γ ∋ x ⦂ A
+      → Γ' ⧺ Γ ∋ x ⦂ A
+    ∋↑ {Γ = ∅} ()
+    ∋↑ {Γ = Γ , x} Z = Z
+    ∋↑ {Γ = Γ , x} (S t) =  S (∋↑ t)
+    e↑ : ∀ {Δ Γ e T E Γ'}
+      → Δ ⨾ Γ ⊢ e ⦂ T / E
+      → Δ ⨾ (Γ' ⧺ Γ) ⊢ e ⦂ T / E
+    e↑ (⊢var x) = ⊢var (∋↑ x)
+    e↑ (⊢lam t) = ⊢lam (e↑ t)
+    e↑ (⊢weak x x₁ t) = ⊢weak x x₁ (e↑ t)
+    e↑ (⊢app t t₁) = ⊢app (e↑ t) (e↑ t₁)
+    e↑ (⊢forall t) = ⊢forall (e↑ t)
+    e↑ (⊢tapp x t) = ⊢tapp x (e↑ t)
+    e↑ (⊢new t) = ⊢new (e↑ t)
+    e↑ (⊢new' t) = ⊢new' (e↑ t)
+    e↑ (⊢shift₀ x t t₁) = ⊢shift₀ x (e↑ t) (e↑ t₁)
+    e↑ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ x (e↑ t) (e↑ t₁) (e↑ t₂)
+    e↑ (⊢label x) = ⊢label x
+    
         
     module RExprSubstTyped where
         ext : ∀ {Γ Γ' }
@@ -315,7 +339,7 @@ Typing Context are changed, because now w store labels for typing variables boun
         subst σ (⊢forall {k = k} x) = tlam k (subst (pushΔ σ) x .proj₁) ,, ⊢forall (subst (pushΔ σ) x .proj₂)
         subst σ (⊢tapp x x₁) = tapp (subst σ x₁ .proj₁) _ ,, ⊢tapp x (subst σ x₁ .proj₂)
         subst σ (⊢new x) = new (subst (pushΔ (exts σ))  x .proj₁) ,,  ⊢new (subst (pushΔ (exts σ))  x .proj₂)
-        subst σ (⊢new' x) = new' _ (subst (eΔ σ) x .proj₁) ,, ⊢new' (subst (eΔ σ) x .proj₂)
+        subst σ {e = new' l _}(⊢new' x) = new' l (subst (eΔ σ) x .proj₁) ,, ⊢new' (subst (eΔ σ) x .proj₂)
         subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁) ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
         subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁) ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
         subst σ (⊢label {l = l} x) = label l ,, ⊢label x
@@ -432,6 +456,17 @@ fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 ∘f-lemma (freset-label ee en x x₁ x₂ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ∘f-lemma (fshift-label e₁ x x₁ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 
+↑f : forall { Δ A B Eff Eff' Δ' n Γ' Γ}
+  → Frame Δ  Γ      A Eff B Eff' Δ' n
+  → Frame Δ (Γ' ⧺ Γ) A Eff B Eff' Δ' n
+↑f fempty = fempty
+↑f (fapp₁ f e {t}) = fapp₁ (↑f f) e {e↑ t}
+↑f (fapp₂ e {v} {t} f) = fapp₂ e {v} {e↑ t} (↑f f)
+↑f (fnew' l f) = fnew' l (↑f f)
+↑f (freset-label e en x x₁ x₂ f) = freset-label e en x (e↑ x₁) (e↑ x₂) (↑f f)
+↑f (fshift-label e x x₁ f) = fshift-label e x (e↑ x₁) (↑f f)
+  
+
 data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type → Effects → TContext → ℕ → Set where
   -- Metaframe splits evaluation context into frames separated by resets
   -- type parameters and indices work the same as in frame
@@ -444,9 +479,16 @@ data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects) : Type 
     → Metaframe Δ Γ T (ttv l' ∷ Eff) A Eff' Δ' n
     → Metaframe Δ Γ T Eff B Eff' Δ' n
   mframe : ∀ {A Eff' Δ' n B Eff'' Δ'' m}
-    → Frame     Δ  Γ A Eff B Eff' Δ' n
+    → Frame     Δ  Γ A Eff  B Eff'  Δ'  n
     → Metaframe Δ' Γ T Eff' A Eff'' Δ'' m
-    → Metaframe Δ  Γ T Eff B  Eff'' Δ''  (n + m)
+    → Metaframe Δ  Γ T Eff  B Eff'' Δ'' (n + m)
+    
+↑m : forall { Δ A B Eff Eff' Δ' n Γ' Γ}
+  → Metaframe Δ  Γ      A Eff B Eff' Δ' n
+  → Metaframe Δ (Γ' ⧺ Γ) A Eff B Eff' Δ' n
+↑m mfempty = mfempty
+↑m (mfreset l x x₁ e x₂ mf) = mfreset l x (e↑ x₁) e (e↑ x₂) (↑m mf)
+↑m (mframe x mf) = mframe (↑f x) (↑m mf)
 
 mplug : ∀ {Γ Δ Δ' T Eff A n E} → Metaframe Δ Γ T Eff A E Δ' n → (e : RExpr) → Δ' ⨾ Γ ⊢ e ⦂ T / E  →  Σ[ res ∈ RExpr ] (Δ ⨾ Γ ⊢ res ⦂ A / Eff)
 mplug mfempty e t = e ,, t
@@ -495,13 +537,22 @@ data _↦_ : RExpr × State → RExpr × State → Set where
   → {ten : Δ ⨾ (Γ , A) ⊢ en ⦂ B / E}
    → reset₀ V en e' ,′ s ↦ (RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁) ,′ s
 
- Β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' t' B A' E' l'} → { f : Metaframe Δ ∅ T Eff A Eff' Δ' n } → {t : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
-   → {tes : Δ ⨾ (∅ , B) ⊢ es ⦂ T / Eff' }
-   → {te : Δ ⨾ ∅ ⊢ e ⦂ A' / (ttv l' ∷ E') }
-   → {ten : Δ ⨾ ∅ , A' ⊢ en ⦂ A / E' }
-   → {te' : Δ ⨾ ∅ ⊢ e' ⦂ (L ttv l' at A / E') /  nil }
-   → (proj₁ (mplug  f (shift₀ e' es) t)) ≡ e
-   → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug f (var 0) t')) en e')) {te = tes} {te1 =  gvalue vlam  {!!}} .proj₁  ,′ s
+ β-reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' B A' E' ls lr}
+   → { f : Metaframe Δ ∅ T Eff A Eff' Δ' n }
+   -> Value (e')
+   --shift
+   → {ts : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+   → {tes : Δ' ⨾ (∅ , T - Eff' > B) ⊢ es ⦂ B / Eff' }
+   → {tls : Δ' ⨾ ∅ ⊢ e' ⦂ (L ttv ls at B / Eff') /  nil }
+   → {tlvs : Δ'  ⊢  ttv lr ⦂e }
+   --reset
+   → {te : Δ ⨾ ∅ ⊢ e ⦂ A' / (ttv lr ∷ E') }
+   → {ten : Δ ⨾ ∅ , A' ⊢ en ⦂ T / Eff }
+   → {tlr : Δ ⨾ ∅ ⊢ e' ⦂ (L ttv lr at T / Eff) /  nil }
+   → {tlvr : Δ  ⊢  ttv lr ⦂e }
+   → (proj₁ (mplug  f (shift₀ e' es) ts)) ≡ e
+   → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z))) en e')) {te = tes} {te1 = gvalue vlam (⊢lam (⊢reset₀ tlvs ( {!!}) {!!} {!!}))} .proj₁  ,′ s
+ --  → reset₀ e en e' ,′ s ↦ RExprSubstTyped._[_] es (lam (reset₀ (proj₁ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z))) en e')) {te = tes} {te1 =  gvalue vlam  (⊢lam (⊢reset₀ tl' (e↑ te') {! (proj₂ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z)))!} (e↑ ten)))} .proj₁  ,′ s
 
 infix 2 _-→_
 data _-→_ : RExpr × State → RExpr × State → Set where
@@ -511,30 +562,31 @@ data _-→_ : RExpr × State → RExpr × State → Set where
     → Data.Product.proj₁ (mplug f e2' t2) ≡ e2
     →  (e1 ,′ s) -→ (e2 ,′ s')
 
-data Decompose : ∀ {Δ A Effs} → State → (e : RExpr) → (Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Set where
+data Decompose : State → (e : RExpr)  → Set where
   de-simpl-redex : ∀ {e e2 s s' n Δ Δ' A T Eff Eff'} 
     → (f : Metaframe Δ ∅ T Eff A Eff' Δ' n)
     → (e ,′ s) -→ (e2 ,′ s')
     → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
-    → Decompose s e t
+    → Decompose s e 
   de-shift : ∀ {s Δ Δ' T Eff A n Eff' es es' e l t} 
     → (f : Metaframe Δ ∅ T Eff A Eff' Δ' n)
     →  shift₀ (label l) es' ≡ es
     → Data.Product.proj₁ (mplug f es t) ≡ e
-    --→ (e ,′ s) -→ (e2 ,′ s')
     → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
+    --→ (e ,′ s) -→ (e2 ,′ s')
     → (ts : Δ ⨾ ∅ ⊢ es ⦂ T / Eff')
-    → Decompose s e t
+    → Decompose s e 
   de-val : ∀ {Δ Eff A s e} → { t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff}
     -> Value e
-    → Decompose s e t
+    → Decompose s e 
   
 
-decompose : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose s e t
+decompose : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose s e
 decompose s (lam e) (⊢lam t) = de-val vlam
 decompose s e (⊢forall t) = de-val vLam
 decompose s e (⊢label x) = de-val vlab
-decompose = {!!}
+decompose s e (⊢weak x x₁ t) = decompose s e t
+decompose s e (⊢tapp x t) = {!!}
 --decompose s e (⊢new t) = de-simpl-redex mfempty (-→frame mfempty ↦new refl refl) (⊢new t)
 decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!!}}  mfempty ↦new refl refl ) (⊢new t)
 decompose s e (⊢app t t₁) = {!!}
@@ -543,28 +595,3 @@ decompose s e (⊢new' t) = {!!}
 decompose s e (⊢shift₀ x t t₁) = de-shift mfempty refl {!!} (⊢shift₀ x t t₁) {!!}
 decompose s e (⊢reset₀ x t t₁ t₂) = {!!}
 
-{-
-data Progress (E : Expr) (S : State) : Set where
- step : ∀ {E' S'}
-   → E ,′ S -→ E' ,′ S'
-   → Progress E S
- done : Value E
-   → Progress E S
-data _⊢s_ : State → Expr → Set where
-  -- represents proof that all labels are obtainable in current state
-  -- that is they are smaller than state
-  --TODO all constructors
-progress : ∀ {E A  S }→ {S ⊢s E}
-  → ∅ , ∅ ⊢ E ⦂ A / nil
-  → Progress E S
-progress  (⊢var {x = x₁ } x _) = {!!}
-progress (⊢lam x) = done vlam
-progress (⊢app x x₁) = {!!}
-progress (⊢forall x) = done vLam
-progress (⊢new x) = {!!}
-progress (⊢reset₀ _ x x₁ x₂) = {!!}
-
-progress (⊢label _ _) = done vlab
-
--}
-```
