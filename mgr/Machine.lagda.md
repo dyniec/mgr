@@ -4,7 +4,7 @@ module Machine where
 open import Data.Nat
 open import Data.List
 open import Data.Product using (_×_;_,′_)
---open import mgr.Types
+open import Runtime
 
 data Erased : Set where
   var : ℕ → Erased
@@ -13,7 +13,19 @@ data Erased : Set where
   new : Erased → Erased
   shift₀ : Erased → Erased → Erased
   reset₀ : Erased → Erased → Erased → Erased
-  
+  label : ℕ → Erased
+
+erased : Runtime.RuntimeExpr.RExpr → Erased
+erased (RuntimeExpr.var x) = var x
+erased (RuntimeExpr.lam x) = lam (erased x)
+erased (RuntimeExpr.app x x₁) = app (erased x) (erased x₁)
+erased (RuntimeExpr.tlam x x₁) = lam (erased x₁)
+erased (RuntimeExpr.tapp x x₁) = app (erased x) (lam (var 0))
+erased (RuntimeExpr.new x) = new (erased x)
+erased (RuntimeExpr.new' x x₁) = erased x₁
+erased (RuntimeExpr.shift₀ x x₁) = shift₀ (erased x) (erased x₁)
+erased (RuntimeExpr.reset₀ x x₁ x₂) = reset₀ (erased x) (erased x₁) (erased x₂)
+erased (RuntimeExpr.label x) = label x
   
 
 Env : Set
@@ -22,7 +34,7 @@ data Context : Set
 MetaContext : Set
 
 Counter = ℕ --label allocator
-Env = (List Val) × Counter
+Env = List Val
 data Val where
   thunk : Erased → Env → Val
   kont :  Context → Val
@@ -36,9 +48,9 @@ data Context where
 MetaContext = List Context
 
 data State : Set where
-  eval : Erased → Env → MetaContext → State
-  cont : Context → Val → State
+  eval : Erased → Env → MetaContext → Counter → State
+  cont : Context → Val → Counter → State
   
 init : Erased → State
-init e = eval e ([] ,′ zero) (end ∷ [])
+init e = eval e []  (end ∷ []) zero
 ```
