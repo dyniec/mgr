@@ -15,9 +15,11 @@
 %\date          {}                     % Data zlozenia pracy
 % Dane do oswiadczenia o autorskim wykonaniu
 \transcriptnum {271900}                     % Numer indeksu
-\polishabstract{}
+\polishabstract{Tematem tej pracy jest stworzenie i zweryfikowanie języka z ograniczonymi
+                operatorami kontorli. Używa on polimorficznych typów aby pozwolić na wyrażenie
+                obliczeń generycznych wobec pewnych efektów.}
 \englishabstract{We present type system for language with labeled delimited control operators.
-                 It utilizes polymorphic types to allow expressions parametrized by effects.
+                 It utilizes polymorphic types and effects to allow expressions parametrized by effects.
                  Our goal is to formally prove correctness of such language and present translation
                  of it to simple abstract machine.}
 %\advisorgen    { } % Nazwisko promotora w dopelniaczu
@@ -54,12 +56,12 @@
 
 \chapter{Introduction}
 
+Control operators have been present in languages from long time. Operators for delimited control introduced by Danvy, Filinski\cite{abstracting} and Felleisen\cite{prompts} allow to control them more precisely. They still allow for non-local execution, which enables intresting computational effects such as emulating non-determinism, exceptions.
 
-%%%%% BIBLIOGRAFIA
+In this paper we try to build typed version of such calculus with polymorphic types (similiar to \cite{typed_equivalence}) and named labels. Usually such calculi jump from shift to closest enclosing reset. Here we tried labeling them to allow stacking of different effects. This was planned originally to use approach similiar to described \cite{subtyping} to compile language to abstract machine.
 
-%\begin{thebibliography}{1}
-%\bibitem{example} \ldots
-%\end{thebibliography}
+Formalisation work was done in Agda 2.8. Code archive has also nix derivation describing exactly environment to build both package and this paper to ensure reproducibility.
+
 
 \chapter{Types}
 \input{src_tex/Types}
@@ -69,6 +71,13 @@
 \input{src_tex/Progress}
 \chapter{Machine}
 \input{src_tex/Machine}
+\chapter{Discussion/Closing thoughts}
+Unfortunately this project was not delivered in scope that was originally planned.
+Still it shows direction of how formalisation of the language could have been proved.
+
+\begin{thebibliography}{1}
+\input{bibitems.tex}
+\end{thebibliography}
 
 
 \end{document}
