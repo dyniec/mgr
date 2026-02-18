@@ -40,6 +40,8 @@ data Expr : Set where
 ```
 `var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured(including reset) and passed into computation under shift as variable.
 
+Type substitution in types is removed for brevity. It's available in accompanying repository.
+
 \iffalse
 
 ```
@@ -168,20 +170,17 @@ data _⊢_⦂effs where
 Expressions are extrinsically typed, thus typing judgements are represented separately.
 ```
 data _⊢_<⦂_ : TContext → Effects → Effects → Set where
-    Z : ∀ {Δ E}
-        → Δ ⊢ E ⦂effs
+    Z : ∀ {Δ}
         → Δ ⊢ nil <⦂ nil
     S : ∀ {Δ e E1 E2 }
         → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ e ⦂e
         → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
     S' : ∀ {Δ e E1 E2 }
         → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ e ⦂e
         → Δ ⊢ E1 <⦂ (e ∷ E2)
 
 nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
-nil<⦂⊥ (Z _) = refl
+nil<⦂⊥ (Z) = refl
 
 data _⊢_<t⦂_ : TContext → Type → Type → Set where
 

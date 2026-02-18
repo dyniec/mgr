@@ -21,10 +21,7 @@ import Data.Maybe
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
 
-```
 
-
-```
 module ExprSubst where
     Rename = ℕ → ℕ
 
@@ -110,7 +107,7 @@ Typing Context are changed, because now w store labels for typing variables boun
             → `t Δ   ∋t zero ⦂ T
 
         Ze : ∀ {Δ l }
-            → `e l Δ   ∋t zero ⦂ T
+            → `e l Δ   ∋t zero ⦂ E
 
         St : ∀ {Δ x k}
             → Δ ∋t x ⦂ k
@@ -189,18 +186,11 @@ Typing Context are changed, because now w store labels for typing variables boun
             → (push k Δ) ⊢ A1 <t⦂ A2
             → Δ ⊢ E1 <⦂ E2
             → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
-```
 
-```
     module RExprSubst where
 ```
-\iffalse
 
-
-```
-```
-\fi
-
+Substitution of types in expressions is needed for evaluation of type application.
 ```  
         substT-in-rexpr : TypeSubst.Subst → RExpr → RExpr
         substT-in-rexpr ρ (tlam k e) = tlam k (substT-in-rexpr (TypeSubst.exts ρ) e)
@@ -217,47 +207,60 @@ Typing Context are changed, because now w store labels for typing variables boun
 
         _e[t_] : RExpr → Type → RExpr
         M e[t t ] = substT-in-rexpr (TypeSubst.subst-zero t) M
-
-
+```
+Most of typing judgement are working as before.
+```
     data _⨾_⊢_⦂_/_ : TContext → Context → RExpr → Type → Effects → Set where
 
         ⊢var : ∀ {Γ Δ x A E}
             → Γ ∋ x ⦂ A
+            -----------------------
             → Δ ⨾ Γ ⊢ var x ⦂ A / E
 
         ⊢lam : ∀ {Γ Δ e A B E F}
             → Δ ⨾ (Γ , A) ⊢ e ⦂ B / E
+            -------------------------------
             → Δ ⨾ Γ ⊢ lam e ⦂ A - E > B / F
         ⊢weak : ∀ {Γ Δ e A A' E E'}
             → Δ ⊢  A <t⦂ A'
             → Δ ⊢  E <⦂ E'
             → Δ ⨾ Γ ⊢ e ⦂ A / E
+            ---------------------
             → Δ  ⨾ Γ ⊢ e ⦂ A' / E'
         ⊢app : ∀ {Γ Δ e1 e2 A B E}
             → Δ ⨾ Γ ⊢ e1 ⦂ A - E > B / E
             → Δ ⨾ Γ ⊢ e2 ⦂ A / E
+            ----------------------------
             → Δ ⨾ Γ ⊢ app e1 e2  ⦂ B / E
+
         ⊢forall : ∀ {Γ Δ e k A E F}
             → (push k Δ ) ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            ----------------------------------
             → Δ ⨾ Γ ⊢ tlam k e ⦂ forallt k A E / F
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
             → Δ ⊢ T ⦂t
             → Δ ⨾ Γ ⊢ e ⦂ forallt k A E / E
+            ---------------------------------------------------------------
             → Δ ⨾ Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 
         ⊢new : ∀ {Γ  Δ e  A A1 E E1}
             → (push Kind.E Δ)  ⨾ (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            ----------------------
             → Δ ⨾ Γ ⊢ new e ⦂ A / E
-            
+```
+`new'` stores label id in typing context so it can verify correctness of all label values.
+```
         ⊢new' : ∀ {Γ Δ e l A E l'}
             → (`e (Data.Maybe.just l) Δ)  ⨾ Γ  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            ---------------------------
             → Δ  ⨾ Γ ⊢ new' l' e ⦂ A / E
 
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
             → Δ ⊢ ttv n ⦂e
             → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil
             → Δ ⨾ (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
+            -----------------------------------------
             → Δ ⨾ Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
@@ -265,11 +268,86 @@ Typing Context are changed, because now w store labels for typing variables boun
             → Δ ⨾ Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil
             → Δ ⨾ Γ   ⊢ e ⦂ A / (ttv n ∷ E')
             → Δ ⨾ (Γ , A)   ⊢ en ⦂ A' /  E'
+            ------------------------------------
             → Δ ⨾ Γ   ⊢ reset₀ e en e' ⦂ A' / E'
-
+```
+Best we can do statically here is checking that label value really corresponds.
+To prove prove safety we need to add extra conditions on label expressions. That is every label with same value needs to have same type (modulo type indices). Such extra condition would have to be passed to progress, and preservation would need to also prove that such condition is kept.
+```
         ⊢label : ∀ {Γ Δ n l A E F}
             → Δ ∋l n ⦂ l
+            --------------------------------------------
             → Δ ⨾ Γ ⊢ label l ⦂ (L (ttv n) at A / E) / F
+```
+## Runtime embedding
+Embedding of original language in current one. Part of proof is skipped as it goes through almost all judgement types.
+```
+    runtime : Expr → RExpr
+    runtime (var x) = var x
+    runtime (lam x) = lam (runtime x)
+    runtime (app x x₁) = app (runtime x) (runtime x₁)
+    runtime (tlam x x₁) =  tlam x (runtime x₁)
+    runtime (tapp x x₁) = tapp (runtime x) x₁
+    runtime (new x) = new (runtime x)
+    runtime (shift₀ x x₁) =  shift₀ (runtime x) (runtime x₁)
+    runtime (reset₀ x x₁ x₂) = reset₀ (runtime x) (runtime x₁) (runtime x₂)
+    runtimeΔ : Types.TContext → TContext
+    runtimeΔ ∅ = ∅
+    runtimeΔ (Δ , k) = push k (runtimeΔ Δ)
+    
+```
+\iffalse
+```
+    runtime∋t : ∀ {Δ n k}
+      → Δ Types.∋t n ⦂ k → (runtimeΔ Δ) ∋t n ⦂ k
+    runtime∋t {Δ} {n} {T} Z = Zt
+    runtime∋t {Δ} {n} {E} Z = Ze
+    runtime∋t {Δ = Δ , x , T} (S z) = St (runtime∋t z)
+    runtime∋t {Δ = Δ , x , E} (S z) = Se (runtime∋t z)
+    runtime⊢e : ∀ {Δ T}
+      → Δ Types.⊢ T ⦂e → (runtimeΔ Δ) ⊢ T ⦂e
+    runtime⊢e  (⊢ttv x) = ⊢ttv (runtime∋t x)
+    runtime⊢t : ∀ {Δ T}
+      → Δ Types.⊢ T ⦂t → (runtimeΔ Δ) ⊢ T ⦂t
+    runtime⊢effs : ∀ {Δ T}
+      → Δ Types.⊢ T ⦂effs → (runtimeΔ Δ) ⊢ T ⦂effs
+    runtime⊢t (⊢ttv x) = ⊢ttv (runtime∋t x)
+    runtime⊢t (⊢-> x x₁ x₂) = ⊢-> (runtime⊢t x) (runtime⊢effs x₁) (runtime⊢t x)
+    runtime⊢t (⊢forall x x₁) = ⊢forall (runtime⊢t x) (runtime⊢effs x₁)
+    runtime⊢t (⊢label x x₁ x₂) = ⊢label (runtime⊢e x) (runtime⊢t x₁) (runtime⊢effs x₂)
+    runtime⊢effs ⊢nil = ⊢nil
+    runtime⊢effs (⊢cons x x₁) = ⊢cons (runtime⊢e x) (runtime⊢effs x₁)
+    runtime<⦂ : ∀ {Δ E1 E2}
+      → Δ Types.⊢ E1 <⦂ E2
+      → (runtimeΔ Δ) ⊢ E1 <⦂ E2
+    runtime<⦂ (Z ) = Z
+    runtime<⦂ (S x) = S (runtime<⦂ x)
+    runtime<⦂ (S' x) = S' (runtime<⦂ x)
+    runtime<t⦂ : ∀ {Δ T1 T2}
+      → Δ Types.⊢ T1 <t⦂ T2
+      → (runtimeΔ Δ) ⊢ T1 <t⦂ T2
+    runtime<t⦂ <⦂refl = <⦂refl
+    runtime<t⦂ (<⦂→ x x₁ x₂) = <⦂→ (runtime<⦂ x) (runtime<t⦂ x₁) (runtime<t⦂ x₂)
+    runtime<t⦂ (<⦂forall x x₁) = <⦂forall (runtime<t⦂ x) (runtime<⦂ x₁)
+```
+\fi
+
+```
+    runtime-types : ∀ {Δ Γ  e T E}
+      → Δ , Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ Γ ⊢ (runtime e) ⦂ T / E)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢var x) = ⊢var x
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢lam t) = ⊢lam (runtime-types t)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢weak x x₁ t) = ⊢weak (runtime<t⦂ x) (runtime<⦂ x₁) (runtime-types t)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢app t t₁) = ⊢app (runtime-types t) (runtime-types t₁)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢forall t) = ⊢forall (runtime-types t)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢tapp x t) = ⊢tapp (runtime⊢t x) (runtime-types t)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢new t) = ⊢new (runtime-types t)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢shift₀ x t t₁) = ⊢shift₀ ((runtime⊢e x)) (runtime-types t) (runtime-types t₁)
+    runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (runtime⊢e x) (runtime-types t₂) (runtime-types t) (runtime-types t₁)
+        
+```
+Small lemma about concatenating context and that it keeps type safety.
+```
     _⧺_ : Context → Context → Context
     y ⧺ ∅ = y
     y ⧺ (xs , x) = (y ⧺ xs) , x
@@ -293,8 +371,9 @@ Typing Context are changed, because now w store labels for typing variables boun
     e↑ (⊢shift₀ x t t₁) = ⊢shift₀ x (e↑ t) (e↑ t₁)
     e↑ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ x (e↑ t) (e↑ t₁) (e↑ t₂)
     e↑ (⊢label x) = ⊢label x
-    
-        
+```
+Substitution and proof relating typing judgement of inputs and result
+```
     module RExprSubstTyped where
         ext : ∀ {Γ Γ' }
             → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
@@ -353,34 +432,12 @@ Typing Context are changed, because now w store labels for typing variables boun
           where
             σ : (∀ {B n E} →  Γ , A ∋ n ⦂ B  → Σ[ e ∈ RExpr ] Δ ⨾ Γ ⊢ e ⦂ B / E)
             σ {E = E'} Z = e1 ,, (te1 {E'})
-            σ {n = suc n} (S x) = var n ,, ⊢var x 
-    runtime : Expr → RExpr
-    runtime (var x) = var x
-    runtime (lam x) = lam (runtime x)
-    runtime (app x x₁) = app (runtime x) (runtime x₁)
-    runtime (tlam x x₁) =  tlam x (runtime x₁)
-    runtime (tapp x x₁) = tapp (runtime x) x₁
-    runtime (new x) = new (runtime x)
-    runtime (shift₀ x x₁) =  shift₀ (runtime x) (runtime x₁)
-    runtime (reset₀ x x₁ x₂) = reset₀ (runtime x) (runtime x₁) (runtime x₂)
-    runtimeΔ : Types.TContext → TContext
-    runtimeΔ ∅ = ∅
-    runtimeΔ (Δ , T) = `t (runtimeΔ Δ)
-    runtimeΔ (Δ , E) = `e (Data.Maybe.nothing) (runtimeΔ Δ)
-    {-
-    runtime-types : ∀ {Δ Γ  e T E}
-      → Δ , Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ Γ ⊢ (runtime e) ⦂ T / E)
-    runtime-types (⊢var x x₁) = ⊢var {!!} {!!}
-    runtime-types (⊢lam x) = ⊢lam (runtime-types x)
-    runtime-types (⊢app x x₁) = ⊢app (runtime-types x) (runtime-types x₁) 
-    runtime-types (⊢weak x x₁ x₂ x₃) = ⊢weak x x₁ x₂ (runtime-types x₃)
-    runtime-types (⊢forall x) = ⊢forall (runtime-types x)
-    runtime-types (⊢tapp x x₁) = ⊢tapp x (runtime-types x₁)
-    runtime-types (⊢new x) = ⊢new (runtime-types x)
-    runtime-types (⊢shift₀ x x₁ x₂) = ⊢shift₀ x (runtime-types x₁) (runtime-types x₂)
-    runtime-types (⊢reset₀ x x₁ x₂ x₃) = ⊢reset₀ x (runtime-types x₁) (runtime-types x₂) (runtime-types x₃)
-    -}
-        
+            σ {n = suc n} (S x) = var n ,, ⊢var x
+```
+
+## Values
+
+```
 
 open Runtime
 
