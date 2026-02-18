@@ -17,6 +17,9 @@ data Kind : Set where
     E : Kind 
 Id : Set
 Id = ℕ
+```
+Types  and Effects are defined mutally recursive. Type is either variable, arrow, forall or label. Effect is list of types, it's stored in arrow and forall constructor to keep effects of computation underneath. Label type just stores Type and Effect of other computation.
+```
 module Types where
     data Type : Set
     Effects : Set
@@ -27,7 +30,12 @@ module Types where
         L_at_/_ : Type → Type → Effects → Type
     Effects = List Type
 open Types
+```
+`var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured (including reset) and passed into computation under shift as variable.
 
+Type substitution in types is removed for brevity. It's available in accompanying repository.
+
+```
 data Expr : Set where
     var : ℕ → Expr
     lam : Expr → Expr
@@ -36,11 +44,8 @@ data Expr : Set where
     tapp : Expr -> Type -> Expr
     new : Expr → Expr
     shift₀ : Expr → Expr → Expr
-    reset₀ : Expr → Expr → Expr → Expr -- 
+    reset₀ : Expr → Expr → Expr → Expr 
 ```
-`var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured (including reset) and passed into computation under shift as variable.
-
-Type substitution in types is removed for brevity. It's available in accompanying repository.
 
 \iffalse
 
@@ -197,7 +202,7 @@ data _⊢_<t⦂_ : TContext → Type → Type → Set where
         → Δ ⊢ E1 <⦂ E2
         → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
 ```
-Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined as usual.
+Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The only difference is that expressions for values are generic over effect they execute.
 ```
 open TypeSubst
 data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where

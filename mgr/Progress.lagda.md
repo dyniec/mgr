@@ -44,12 +44,20 @@ Frames here are intrinsically typed, thus they also store type judgements of sub
 
 ```
 data Frame (Δ : TContext) (Γ : Context) (T : Type) : Effects → Type → Effects → TContext → ℕ →  Set where
-  fempty : ∀ {Eff} → Frame Δ Γ T Eff T Eff Δ zero
-  fapp₁ : ∀ {A B n Δ' Eff E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  } → Frame Δ Γ T Eff B E Δ' n
-  fapp₂ : ∀ {A B n Δ' Eff E} → (e : RExpr) → { v : Value e} → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff }
+  fempty : ∀ {Eff}
+  -----------------------------
+    → Frame Δ Γ T Eff T Eff Δ zero
+  fapp₁ : ∀ {A B n Δ' Eff E} → Frame Δ Γ T Eff (A - Eff > B) E Δ' n
+    → (e : RExpr)  → { Δ ⨾ Γ ⊢ e ⦂ A / Eff  }
+    --------------------------
+    → Frame Δ Γ T Eff B E Δ' n
+  fapp₂ : ∀ {A B n Δ' Eff E} → (e : RExpr) → { v : Value e}
+    → { Δ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff }
+    --------------------------------------------------------
     → Frame Δ Γ T Eff A E Δ'  n  -> Frame Δ Γ T Eff B E Δ' n
   fnew' : ∀ {A n Δ' Eff E} → (l : Label)
     → Frame (`e (Data.Maybe.just l) Δ) Γ T (TypeSubst.bump' Eff) (TypeSubst.bump A) E Δ' n
+    -------------------------------
     → Frame Δ Γ T Eff A E Δ' (suc n)
   freset-label : ∀ {A n Δ' E l' A' Eff}
     → (e en : RExpr)
@@ -57,12 +65,14 @@ data Frame (Δ : TContext) (Γ : Context) (T : Type) : Effects → Type → Effe
     → Δ ⨾ Γ   ⊢ e ⦂ A' / (ttv l' ∷ Eff)
     → Δ ⨾ (Γ , A')   ⊢ en ⦂ A /  Eff
     → Frame Δ Γ T nil (L ttv l' at A / Eff) E Δ' n
+    --------------------------
     → Frame Δ Γ T Eff A E Δ' n
   fshift-label : ∀ {A n Δ' E l' A' E'}
     → (e : RExpr)
             → Δ ⊢ ttv l' ⦂e
             → Δ ⨾ (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
     → Frame Δ Γ  T nil (L ttv l' at A' / E') E Δ' n
+    -------------------------------------
     → Frame Δ Γ T (ttv l' ∷ nil) A E Δ' n
 
 ```
@@ -114,7 +124,7 @@ We can prove how plugging and composition relate.
 ∘f-lemma (freset-label ee en x x₁ x₂ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ∘f-lemma (fshift-label e₁ x x₁ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ```
-Lifting frames into arbitrary context preserves types
+Lifting frames into arbitrary context preserves types, same as with expressions.
 ```
 ↑f : forall { Δ A B Eff Eff' Δ' n Γ' Γ}
   → Frame Δ  Γ      A Eff B Eff' Δ' n
@@ -141,14 +151,16 @@ data Metaframe (Δ : TContext) (Γ : Context) (T : Type) (Eff : Effects)
     → (l : Label)  → Δ ⊢ ttv l' ⦂e → Δ ⨾ Γ ⊢ label l ⦂ (L ttv l' at B / Eff) / nil
     → (e : RExpr) → (Δ ⨾ Γ , A ⊢ e ⦂ B / Eff)
     → Metaframe Δ Γ T (ttv l' ∷ Eff) A Eff' Δ' n
+    ---------------------------------
     → Metaframe Δ Γ T Eff B Eff' Δ' n
   mframe : ∀ {A Eff' Δ' n B Eff'' Δ'' m}
     → Frame     Δ  Γ A Eff  B Eff'  Δ'  n
     → Metaframe Δ' Γ T Eff' A Eff'' Δ'' m
+    -------------------------------------------
     → Metaframe Δ  Γ T Eff  B Eff'' Δ'' (n + m)
 ```
 Metaframes, same as frames, can be lifted into arbitrary contexts, plugged  and composed.
-They can also be composed with simple frames
+They can also be composed with simple frames.
 ```
 ↑m : forall { Δ A B Eff Eff' Δ' n Γ' Γ}
   → Metaframe Δ  Γ      A Eff B Eff' Δ' n
@@ -193,7 +205,7 @@ _f∘m_ {n = n} f (mframe {n = n1} {m = m1} f' m) = assoc {n = n} {n1 = n1} {m =
 
 # Reduction
 Since labels need to be allocated, reduction relation is defined in terms of expression and state. State itself is just next label to be allocated.
-As frames are intrinsically typed, we need to provide judgment representing well typedness of expressions.
+As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
 ```
 infix 2 _↦_
 State = ℕ

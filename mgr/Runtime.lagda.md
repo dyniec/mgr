@@ -89,9 +89,9 @@ We are using `new'` to hold allocation of labels.
         shift₀ : RExpr → RExpr → RExpr
         reset₀ : RExpr → RExpr → RExpr → RExpr
 ```
-And here we have separate term for labels. 
+And here we have separate term for labels, it just stores label identifier. 
 ```
-        label : Label → RExpr -- label for effects
+        label : Label → RExpr 
 ```
 Typing Context now has different representation, because we store labels for typing variables bound by `new'`.
 Thus all of judgements using them need to be redefined for the runtime language.
@@ -348,7 +348,7 @@ Part of proof is skipped as it goes through almost all judgement types.
     runtime-types {Δ} {Γ} {e} {T₁} {E₁} (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (runtime⊢e x) (runtime-types t₂) (runtime-types t) (runtime-types t₁)
         
 ```
-Small lemma about concatenating context and that it keeps type safety.
+Small lemma about lifting context and that it keeps type safety.
 ```
     _⧺_ : Context → Context → Context
     y ⧺ ∅ = y

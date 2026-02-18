@@ -35,7 +35,7 @@ erased (RuntimeExpr.shift₀ x x₁) = shift₀ (erased x) (erased x₁)
 erased (RuntimeExpr.reset₀ x x₁ x₂) = reset₀ (erased x) (erased x₁) (erased x₂)
 erased (RuntimeExpr.label x) = label x
 ```
-Draft of machine
+Here we present draft of machine, together with draft of evaluation function.
 ```
 Env : Set
 data Val : Set
