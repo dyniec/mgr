@@ -1,3 +1,4 @@
+\iffalse
 ```
 module Types where
 
@@ -5,7 +6,7 @@ open import Data.Nat
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 ```
-
+\fi
 In this section we define syntax of the base language and types.
 
 # Kinds, Types, Effects and Expressions
