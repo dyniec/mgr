@@ -16,12 +16,12 @@ Variable and type variables are de Bruijn indices.
 data Kind : Set where
     T : Kind
     E : Kind 
-Id : Set
-Id = ℕ
 ```
 Types  and Effects are defined mutally recursive. Type is either variable, arrow, forall or label. Effect is list of types, it's stored in arrow and forall constructor to keep effects of computation underneath. Label type just stores Type and Effect of other computation.
 ```
 module Types where
+    Id : Set
+    Id = ℕ
     data Type : Set
     Effects : Set
     data Type  where
@@ -37,15 +37,17 @@ open Types
 Type substitution in types is removed for brevity. It's available in accompanying repository.
 
 ```
-data Expr : Set where
-    var : ℕ → Expr
-    lam : Expr → Expr
-    app : Expr → Expr → Expr
-    tlam : Kind → Expr → Expr
-    tapp : Expr -> Type -> Expr
-    new : Expr → Expr
-    shift₀ : Expr → Expr → Expr
-    reset₀ : Expr → Expr → Expr → Expr 
+module Expr where
+    data Expr : Set where
+        var : ℕ → Expr
+        lam : Expr → Expr
+        app : Expr → Expr → Expr
+        tlam : Kind → Expr → Expr
+        tapp : Expr -> Type -> Expr
+        new : Expr → Expr
+        shift₀ : Expr → Expr → Expr
+        reset₀ : Expr → Expr → Expr → Expr 
+open Expr
 ```
 
 \iffalse
@@ -110,163 +112,214 @@ module TypeSubst where
 # Contexts
 Contexts are represented as list of types, and type contexts are represented as lists of kinds. Judgements for membership of types have Peano numbers structure.
 ```
-infixl 5  _,_
-data Context : Set where
-    ∅ : Context
-    _,_ : Context → Type → Context
+module Typing where
+    infixl 5  _,_
+    data Context : Set where
+        ∅ : Context
+        _,_ : Context → Type → Context
 
-data TContext : Set where
-    ∅ : TContext
-    _,_ : TContext → Kind → TContext
+    data TContext : Set where
+        ∅ : TContext
+        _,_ : TContext → Kind → TContext
 
-infix  4  _∋_⦂_
-data _∋_⦂_ : Context → Id → Type → Set where
-  Z : ∀ {Γ  A}
-    → (Γ , A)  ∋ zero ⦂ A
+    infix  4  _∋_⦂_
+    data _∋_⦂_ : Context → Id → Type → Set where
+        Z : ∀ {Γ  A}
+            → (Γ , A)  ∋ zero ⦂ A
 
-  S : ∀ {Γ x y A}
-    → Γ ∋ x ⦂ A
-    → (Γ , y)  ∋ (suc x) ⦂ A
+        S : ∀ {Γ x y A}
+            → Γ ∋ x ⦂ A
+            → (Γ , y)  ∋ (suc x) ⦂ A
 
-data _∋t_⦂_ : TContext → Id → Kind → Set where
-  Z : ∀ {Δ k}
-    → (Δ , k)  ∋t zero ⦂ k
+    data _∋t_⦂_ : TContext → Id → Kind → Set where
+        Z : ∀ {Δ k}
+            → (Δ , k)  ∋t zero ⦂ k
 
-  S : ∀ {Δ x y k}
-    → Δ ∋t x ⦂ k
-    → (Δ , y)  ∋t (suc x) ⦂ k
+        S : ∀ {Δ x y k}
+            → Δ ∋t x ⦂ k
+            → (Δ , y)  ∋t (suc x) ⦂ k
 ```
 \iffalse
 
 ```
-data _⊢_⦂e : TContext → Type → Set where
-  ⊢ttv : ∀ {Δ n}
-    → Δ ∋t n ⦂ E
-    → Δ ⊢ ttv n ⦂e 
-data _⊢_⦂t : TContext → Type → Set
-data _⊢_⦂effs : TContext → Effects → Set
-data _⊢_⦂t where
-  ⊢ttv : ∀ {Δ n }
-    → Δ ∋t n ⦂ T 
-    → Δ ⊢ ttv n ⦂t
-  ⊢-> : ∀ {Δ t1 effs t2}
-    → Δ ⊢ t1 ⦂t 
-    → Δ ⊢ effs ⦂effs
-    → Δ ⊢ t2 ⦂t 
-    → Δ ⊢ t1 - effs > t1 ⦂t 
-  ⊢forall : ∀ {Δ k t effs}
-    → (Δ , k) ⊢ t ⦂t 
-    → Δ ⊢ effs ⦂effs
-    → Δ ⊢ forallt k t effs ⦂t
-  ⊢label : ∀ {Δ e t effs}
-    → Δ ⊢ e ⦂e
-    → Δ ⊢ t ⦂t
-    → Δ ⊢ effs ⦂effs
-    → Δ ⊢ L e at t / effs ⦂t 
-data _⊢_⦂effs where
-  ⊢nil : ∀ {Δ}
-    → Δ ⊢ nil ⦂effs
-  ⊢cons : ∀ {Δ e effs}
-    → Δ ⊢ e ⦂e 
-    → Δ ⊢ effs ⦂effs
-    → Δ ⊢ e ∷ effs ⦂effs
+    data _⊢_⦂e : TContext → Type → Set where
+        ⊢ttv : ∀ {Δ n}
+            → Δ ∋t n ⦂ E
+            → Δ ⊢ ttv n ⦂e 
+    data _⊢_⦂t : TContext → Type → Set
+    data _⊢_⦂effs : TContext → Effects → Set
+    data _⊢_⦂t where
+        ⊢ttv : ∀ {Δ n }
+            → Δ ∋t n ⦂ T 
+            → Δ ⊢ ttv n ⦂t
+        ⊢-> : ∀ {Δ t1 effs t2}
+            → Δ ⊢ t1 ⦂t 
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ t2 ⦂t 
+            → Δ ⊢ t1 - effs > t1 ⦂t 
+        ⊢forall : ∀ {Δ k t effs}
+            → (Δ , k) ⊢ t ⦂t 
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ forallt k t effs ⦂t
+        ⊢label : ∀ {Δ e t effs}
+            → Δ ⊢ e ⦂e
+            → Δ ⊢ t ⦂t
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ L e at t / effs ⦂t 
+    data _⊢_⦂effs where
+        ⊢nil : ∀ {Δ}
+            → Δ ⊢ nil ⦂effs
+        ⊢cons : ∀ {Δ e effs}
+            → Δ ⊢ e ⦂e 
+            → Δ ⊢ effs ⦂effs
+            → Δ ⊢ e ∷ effs ⦂effs
 ```
 \fi
 # Typing judgements
 Expressions are extrinsically typed, thus typing judgements are represented separately.
 ```
-data _⊢_<⦂_ : TContext → Effects → Effects → Set where
-    Z : ∀ {Δ}
-        → Δ ⊢ nil <⦂ nil
-    S : ∀ {Δ e E1 E2 }
-        → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
-    S' : ∀ {Δ e E1 E2 }
-        → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ E1 <⦂ (e ∷ E2)
+    data _⊢_<⦂_ : TContext → Effects → Effects → Set where
+        Z : ∀ {Δ}
+            → Δ ⊢ nil <⦂ nil
+        S : ∀ {Δ e E1 E2 }
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ (e ∷ E1) <⦂ (e ∷ E2)
+        S' : ∀ {Δ e E1 E2 }
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ E1 <⦂ (e ∷ E2)
 
-nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
-nil<⦂⊥ (Z) = refl
+    nil<⦂⊥ : ∀ {Δ E } → Δ ⊢ E <⦂ nil → E ≡ nil
+    nil<⦂⊥ (Z) = refl
 
-data _⊢_<t⦂_ : TContext → Type → Type → Set where
+    data _⊢_<t⦂_ : TContext → Type → Type → Set where
 
-    <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
+        <⦂refl : ∀ {Δ A} → Δ ⊢ A <t⦂ A
 
-    <⦂→ : ∀ {Δ A1 A2 B1 B2 E1 E2} 
-        → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ A1 <t⦂ A2
-        → Δ ⊢ B1 <t⦂ B2 
-        → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
+        <⦂→ : ∀ {Δ A1 A2 B1 B2 E1 E2} 
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ A1 <t⦂ A2
+            → Δ ⊢ B1 <t⦂ B2 
+            → Δ ⊢ (A2 - E1 > B1) <t⦂ (A1 - E2 > B2)
 
-    <⦂forall : ∀ {Δ A1 A2 k E1 E2}
-        → (Δ , k) ⊢ A1 <t⦂ A2
-        → Δ ⊢ E1 <⦂ E2
-        → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
+        <⦂forall : ∀ {Δ A1 A2 k E1 E2}
+            → (Δ , k) ⊢ A1 <t⦂ A2
+            → Δ ⊢ E1 <⦂ E2
+            → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
 ```
 Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The only difference is that expressions for values are generic over effect they execute.
 ```
-open TypeSubst
-data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
-    ⊢var : ∀ {Γ Δ x A E}
-        → Γ ∋ x ⦂ A
-        -----------------------
-        → Δ , Γ ⊢ var x ⦂ A / E
-    
-    ⊢lam : ∀ {Γ Δ e A B E F}
-        → Δ , (Γ , A) ⊢ e ⦂ B / E
-        ---------------------------------
-        → Δ , Γ ⊢ lam e ⦂ A - E > B / F
-        
-    ⊢weak : ∀ {Γ Δ e A A' E E'}
-        → Δ ⊢  A <t⦂ A'
-        → Δ ⊢  E <⦂ E'
-        → Δ , Γ ⊢ e ⦂ A / E
-        ---------------------
-        → Δ , Γ ⊢ e ⦂ A' / E' 
-        
-    ⊢app : ∀ {Γ Δ e1 e2 A B E}
-        → Δ , Γ ⊢ e1 ⦂ A - E > B / E
-        → Δ , Γ ⊢ e2 ⦂ A / E
-        -----------------------------
-        → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
-                                    
-    ⊢forall : ∀ {Γ Δ e k A E F}
-        → (Δ , k) , Γ  ⊢ e ⦂ bump A /  bump' E
-        --------------------------------------
-        → Δ , Γ ⊢ tlam k e ⦂ forallt k A E / F
+    data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
+        ⊢var : ∀ {Γ Δ x A E}
+            → Γ ∋ x ⦂ A
+            -----------------------
+            → Δ , Γ ⊢ var x ⦂ A / E
 
-    ⊢tapp : ∀ {Γ Δ e k A T E}
-        → Δ ⊢ T ⦂t
-        → Δ , Γ ⊢ e ⦂ forallt k A E / E
-        ---------------------------------------------------
-        → Δ  , Γ ⊢ tapp e T ⦂ A [ T ] / (E effs[t T ])
+        ⊢lam : ∀ {Γ Δ e A B E F}
+            → Δ , (Γ , A) ⊢ e ⦂ B / E
+            ---------------------------------
+            → Δ , Γ ⊢ lam e ⦂ A - E > B / F
+
+        ⊢weak : ∀ {Γ Δ e A A' E E'}
+            → Δ ⊢  A <t⦂ A'
+            → Δ ⊢  E <⦂ E'
+            → Δ , Γ ⊢ e ⦂ A / E
+            ---------------------
+            → Δ , Γ ⊢ e ⦂ A' / E' 
+
+        ⊢app : ∀ {Γ Δ e1 e2 A B E}
+            → Δ , Γ ⊢ e1 ⦂ A - E > B / E
+            → Δ , Γ ⊢ e2 ⦂ A / E
+            -----------------------------
+            → Δ , Γ ⊢ app e1 e2  ⦂ B / E 
+
+        ⊢forall : ∀ {Γ Δ e k A E F}
+            → (Δ , k) , Γ  ⊢ e ⦂ TypeSubst.bump A /  TypeSubst.bump' E
+            --------------------------------------
+            → Δ , Γ ⊢ tlam k e ⦂ forallt k A E / F
+
+        ⊢tapp : ∀ {Γ Δ e k A T E}
+            → Δ ⊢ T ⦂t
+            → Δ , Γ ⊢ e ⦂ forallt k A E / E
+            ---------------------------------------------------
+            → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 ```
 `new` introduces new type variable, and variable that represent effect and label. Type of label stores type of label (here `ttv zero`). `A1` / `A2` represent type and effect of corresponding reset.
 ```
-    ⊢new : ∀ {Γ Δ e  A A1 E E1}
-        → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ bump A / bump' E
-        -----------------------
-        → Δ , Γ ⊢ new e ⦂ A / E
+        ⊢new : ∀ {Γ Δ e  A A1 E E1}
+            → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
+            -----------------------
+            → Δ , Γ ⊢ new e ⦂ A / E
 ```
 `shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this continuation should be function type from type of shift to reset, with effects visible in reset. Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
 
 ```
-    ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
-        → Δ ⊢ ttv n ⦂e
-        → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
-        → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
-        -----------------------------------------
-        → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
+        ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
+            → Δ ⊢ ttv n ⦂e
+            → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
+            -----------------------------------------
+            → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
 ```
 `reset₀`  has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle value returned from first argument. And third is label, which type stores type and effects of whole expression.
 ```
-    ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
-        → Δ ⊢ ttv n ⦂e
-        → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
-        → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
-        → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
-        ------------------------------------
-        → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
+        ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
+            → Δ ⊢ ttv n ⦂e
+            → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
+            → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
+            → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            ------------------------------------
+            → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
 ```
+
+\iffalse
+```
+module ExprSubst where
+    open Types
+    Rename = ℕ → ℕ
+
+    Subst = ℕ → Expr
+    ext : Rename → Rename 
+    ext ρ zero    = zero
+    ext ρ (suc x) = suc (ρ x)
+
+    rename : Rename → (Expr → Expr)
+    rename ρ (var x₁) = var (ρ x₁)
+    rename ρ (lam x₁) = lam (rename (ext ρ) x₁)
+    rename ρ (app x₁ x₂) = app (rename ρ x₁) (rename ρ x₂)
+    rename ρ (tlam k x) = tlam k (rename ρ x)
+    rename ρ (tapp x₁ x₂) = tapp (rename ρ x₁)  x₂
+    rename ρ (new x₁) = new (rename (ext ρ) x₁)
+    rename ρ (shift₀ x₁ x₂) = shift₀ (rename ρ x₁) (rename (ext ρ) x₂)
+    rename ρ (reset₀ x₁ x₂ x₃) = reset₀ (rename ρ x₁) (rename (ext ρ) x₂) (rename ρ x₃)
+
+    exts :  Subst → Subst 
+    exts ρ zero    = var zero
+    exts ρ (suc x) = rename suc (ρ x)
+
+    subst : Subst → (Expr -> Expr) 
+    subst ρ (var x) = ρ x
+    subst ρ (lam y) = lam (subst (exts ρ) y)
+    subst ρ (app y y₁) = app (subst ρ y) (subst ρ y₁)
+    subst ρ (tlam k x) = tlam k (subst ρ x)
+    subst ρ (tapp x₁ x₂) = tapp (subst ρ x₁) x₂
+    subst ρ (new y) = new (subst (exts ρ) y)
+    subst ρ (shift₀ y y₁) = shift₀ (subst ρ y)  (subst (exts ρ) y₁)
+    subst ρ (reset₀ y y₁ y₂) = reset₀ (subst ρ y) (subst (exts ρ) y₁) (subst ρ y₂)
+
+    subst-zero :  Expr  → Subst
+    subst-zero e zero    = e
+    subst-zero e (suc x) = var x
+
+    infix 8 _[_]
+
+    _[_] :  Expr -> Expr -> Expr
+    M [ N ] = subst (subst-zero N) M
+
+    _ : var zero [ lam (new (var zero)) ] ≡ lam (new (var zero))
+    _ = refl
+    _ : lam (var zero) [ var 555 ] ≡ lam  (var zero)
+    _ = refl
+```
+\fi
