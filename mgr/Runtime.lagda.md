@@ -461,8 +461,9 @@ e↑ (⊢label x) = ⊢label x
 ```
 Substitution and proof relating typing judgement of inputs and result are defined together inductively.
 ```
-{-
+
     module RExprSubstTyped where
+        open RuntimeExpr
         ext : ∀ {Γ Γ' }
             → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
             → (∀ {A B n} → (Γ , B) ∋ n ⦂ A → Σ[ m ∈ ℕ ] (Γ' , B) ∋ m ⦂ A)
@@ -471,7 +472,7 @@ Substitution and proof relating typing judgement of inputs and result are define
 
         rename : ∀ {Γ Γ'}
             → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
-            → (∀ {Δ A e E} → Δ ⨾ Γ ⊢ e ⦂ A / E →  Σ[ e' ∈ RExpr ] Δ ⨾ Γ' ⊢ e' ⦂ A / E)
+            → (∀ {Δ Θ A e E} → Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ A / E →  Σ[ e' ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e' ⦂ A / E)
         rename ρ (⊢var { x = n } x) = (var (ρ x .proj₁)) ,, (⊢var (ρ x .proj₂) )
         rename ρ (⊢lam x) = (lam (rename (ext ρ) x .proj₁)) ,, (⊢lam (proj₂ (rename (ext ρ) x) ) )
         rename ρ (⊢weak x x₁ x₂ ) = (rename ρ x₂ .proj₁) ,, ⊢weak x x₁ (rename ρ x₂ .proj₂)
@@ -479,8 +480,6 @@ Substitution and proof relating typing judgement of inputs and result are define
         rename ρ (⊢forall {k = k} x) = tlam k (rename ρ x .proj₁) ,, ⊢forall (rename ρ x .proj₂)
         rename ρ (⊢tapp x x₁) = tapp (rename ρ x₁ .proj₁) _ ,, ⊢tapp x (rename ρ x₁ .proj₂)
         rename ρ (⊢new x) = new (rename (ext ρ) x .proj₁) ,, ⊢new (rename (ext ρ) x .proj₂)
-        rename ρ (⊢new' {l = l} x) = new' l (rename ρ x .proj₁)
-          ,, ⊢new' (rename ρ x .proj₂)
         rename ρ (⊢shift₀ x x₁ x₂) = shift₀ (rename ρ x₁ .proj₁) ( rename (ext ρ) x₂ .proj₁)
           ,, ⊢shift₀ x (rename ρ x₁ .proj₂) (rename (ext ρ) x₂ .proj₂)
         rename ρ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (rename ρ x₂ .proj₁) (rename (ext ρ) x₃ .proj₁) (rename ρ x₁ .proj₁)
@@ -488,21 +487,21 @@ Substitution and proof relating typing judgement of inputs and result are define
           ⊢reset₀ x (rename ρ x₁ .proj₂) (rename ρ x₂ .proj₂) (rename (ext ρ) x₃ .proj₂)
         rename ρ (⊢label x ) = _ ,, ⊢label x
         postulate
-            pushΔ :  ∀ {Γ Γ' Δ k}
-                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
-                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] (push k Δ) ⨾ Γ' ⊢ e ⦂ A / E)
-            eΔ :  ∀ {Γ Γ' Δ k}
-                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
-                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] (`e k Δ) ⨾ Γ' ⊢ e ⦂ A / E)
-        exts : ∀ {Γ Γ' Δ}
-            → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
-            → (∀ {n A B E} → Γ , B ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' , B ⊢ e ⦂ A / E)
+            pushΔ :  ∀ {Γ Γ' Δ k Θ}
+                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] (push k Δ)⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+            eΔ :  ∀ {Γ Γ' Δ k Θ}
+                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+                → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ]  Δ , k ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+        exts : ∀ {Γ Γ' Δ Θ}
+            → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+            → (∀ {n A B E} → Γ , B ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' , B ⊢ e ⦂ A / E)
         exts ρ Z = (var zero) ,, (⊢var Z) 
         exts ρ (S x)  = rename (λ {A = A₁} {n} z → suc n ,, S z) (ρ x .proj₂)
         
-        subst : ∀ {Δ Γ Γ'}
-            → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Γ' ⊢ e ⦂ A / E)
-            → (∀ {e A E} → Δ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Γ'  ⊢ e ⦂ A / E)
+        subst : ∀ {Δ Γ Γ' Θ}
+            → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+            → (∀ {e A E} → Δ ⨾ Θ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ'  ⊢ e ⦂ A / E)
         subst σ (⊢var x) = σ x
         subst σ (⊢lam x) = lam (subst (exts σ) x .proj₁) ,, ⊢lam (subst (exts σ) x .proj₂)
         subst σ (⊢weak x x₁ x₂) = subst σ x₂ .proj₁ ,, ⊢weak x x₁ (subst σ x₂ .proj₂)
@@ -511,27 +510,25 @@ Substitution and proof relating typing judgement of inputs and result are define
         subst σ (⊢tapp x x₁) = tapp (subst σ x₁ .proj₁) _ ,, ⊢tapp x (subst σ x₁ .proj₂)
         subst σ (⊢new x) = new (subst (pushΔ (exts σ))  x .proj₁)
           ,,  ⊢new (subst (pushΔ (exts σ))  x .proj₂)
-        subst σ {e = new' l _}(⊢new' x) = new' l (subst (eΔ σ) x .proj₁)
-          ,, ⊢new' (subst (eΔ σ) x .proj₂)
         subst σ (⊢shift₀ x x₁ x₂) = shift₀ (subst σ x₁ .proj₁) (subst (exts σ) x₂ .proj₁)
           ,, ⊢shift₀ x (subst σ x₁ .proj₂) (subst (exts σ) x₂ .proj₂)
         subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁)
           ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
-        subst σ (⊢label {l = l} x) = label l ,, ⊢label x
+        subst σ (⊢label {n = n} x) = label n ,, ⊢label x
 
-        _[_] : ∀ {Δ Γ A B E1}
+        _[_] : ∀ {Δ Θ Γ A B E1}
             → (e e1 : RExpr)
-            → {te : Δ ⨾ Γ , A ⊢ e ⦂ B / E1}
-            → {te1 : ∀ {E } → Δ ⨾ Γ ⊢ e1 ⦂ A / E}
-            → Σ[ e' ∈ RExpr ] Δ ⨾ Γ ⊢ e' ⦂ B / E1
-        _[_] {Δ}{Γ}{A}{B}{E1}e e1 {te}{te1} = subst {Δ}{Γ , A}{Γ} σ  te
+            → {te : Δ ⨾ Θ ⨾ Γ , A ⊢ e ⦂ B / E1}
+            → {te1 : ∀ {E } → Δ ⨾ Θ ⨾ Γ ⊢ e1 ⦂ A / E}
+            → Σ[ e' ∈ RExpr ] Δ ⨾ Θ ⨾ Γ ⊢ e' ⦂ B / E1
+        _[_] {Δ}{Θ}{Γ}{A}{B}{E1}e e1 {te}{te1} = subst {Δ}{Γ , A}{Γ} σ  te
           where
-            σ : (∀ {B n E} →  Γ , A ∋ n ⦂ B  → Σ[ e ∈ RExpr ] Δ ⨾ Γ ⊢ e ⦂ B / E)
+            σ : (∀ {B n E} →  Γ , A ∋ n ⦂ B  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ B / E)
             σ {E = E'} Z = e1 ,, (te1 {E'})
             σ {n = suc n} (S x) = var n ,, ⊢var x
 
 
 
--}
+
 ```
 
