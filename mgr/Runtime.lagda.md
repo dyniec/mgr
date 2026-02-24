@@ -271,7 +271,7 @@ Most of typing judgement are working as before.
             → Δ ⨾ Θ ⨾ Γ ⊢ tlam k e ⦂ forallt k A E / F
 
         ⊢tapp : 
-            Δ ⨾ Θ  ⊢ B ⦂t
+            Δ ⨾ Θ  ⊢ B ⦂t --TODO we need to allow effects as well
             → Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ forallt k A E / E
             ---------------------------------------------------------------
             → Δ ⨾ Θ ⨾ Γ ⊢ tapp e B ⦂ A TypeSubst.[ B ] / (E TypeSubst.effs[t B ])
@@ -392,6 +392,17 @@ module Transform where
         rt-bump-t ρ (Types.Types.L A at A2 / Ef) rewrite rt-bump-t ρ A rewrite rt-bump-t ρ A2 rewrite rt-bump-e ρ Ef = refl
         rt-bump-e ρ nil = refl
         rt-bump-e ρ (x ∷ ef) rewrite rt-bump-t ρ x rewrite rt-bump-e ρ ef = refl
+        postulate
+          rt-t-subst : ∀ A B → ((rt-t A) TypeSubst.[ rt-t B ] ) ≡
+            (rt-t (A Types.TypeSubst.[ B ] ))
+          rt-t'-subst : ∀ A B → ((rt-t' A) TypeSubst.effs[t rt-t B ] ) ≡
+            (rt-t' (A Types.TypeSubst.effs[t B ] ))
+          rt-tapp : ∀ {Δ Γ e A B E}
+           → runtimeΔ Δ ⨾ 0 ⨾ runtimeΓ Γ ⊢ tapp (runtime e) (rt-t B) ⦂
+           (rt-t A) TypeSubst.[ rt-t B ] / (rt-t' E TypeSubst.effs[t rt-t B ])
+           → runtimeΔ Δ ⨾ 0 ⨾ runtimeΓ Γ ⊢ tapp (runtime e) (rt-t B) ⦂
+           rt-t (A Types.TypeSubst.[ B ]) /
+           rt-t' (E Types.TypeSubst.effs[t B ])
 
 ```
 \fi
@@ -407,13 +418,14 @@ module Transform where
 
         runtime-types : ∀ {Δ Γ  e T E}
           → Δ Types.Typing., Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ 0 ⨾ runtimeΓ Γ ⊢ (runtime e) ⦂ rt-t T / rt-t' E)
+
         runtime-types (⊢var x) = ⊢var ( runtime∋ x )
         runtime-types (⊢lam t) = ⊢lam (runtime-types t)
         runtime-types (⊢weak x x₁ t) = ⊢weak (runtime<t⦂ x) (runtime<⦂ x₁) (runtime-types t)
         runtime-types (⊢app t t₁) = ⊢app (runtime-types t) (runtime-types t₁)
         runtime-types (⊢forall {Γ} {Δ} {e = e} {k = k}  {A = A} {E = E}  t) = ⊢forall  (rt-bump (runtime-types t))
         
-        runtime-types {e = e} (⊢tapp x t) = {!!}
+        runtime-types (⊢tapp {e = e}{A = A}{T = B}{E = E} x t)  = rt-tapp (⊢tapp {e = runtime e}{A = rt-t A}(runtime⊢t x) (runtime-types t)) 
         runtime-types (⊢new t) =  ⊢new ( rt-bump( runtime-types t))
         runtime-types (⊢shift₀ x t t₁) = ⊢shift₀ ((runtime⊢e x)) (runtime-types t) (runtime-types t₁)
         runtime-types (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (runtime⊢e x) (runtime-types t₂) (runtime-types t) (runtime-types t₁)
