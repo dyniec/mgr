@@ -425,7 +425,7 @@ module Transform where
         runtime-types (⊢app t t₁) = ⊢app (runtime-types t) (runtime-types t₁)
         runtime-types (⊢forall {Γ} {Δ} {e = e} {k = k}  {A = A} {E = E}  t) = ⊢forall  (rt-bump (runtime-types t))
         
-        runtime-types (⊢tapp {e = e}{A = A}{T = B}{E = E} x t)  = rt-tapp (⊢tapp {e = runtime e}{A = rt-t A}(runtime⊢t x) (runtime-types t)) 
+        runtime-types (⊢tapp {e = e}{A = A}{T = B}{E = E} x t)  = rt-tapp {A = A} (⊢tapp {e = runtime e}{A = rt-t A}(runtime⊢t x) (runtime-types t)) 
         runtime-types (⊢new t) =  ⊢new ( rt-bump( runtime-types t))
         runtime-types (⊢shift₀ x t t₁) = ⊢shift₀ ((runtime⊢e x)) (runtime-types t) (runtime-types t₁)
         runtime-types (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (runtime⊢e x) (runtime-types t₂) (runtime-types t) (runtime-types t₁)
