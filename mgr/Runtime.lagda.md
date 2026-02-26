@@ -13,10 +13,11 @@ module Runtime where
 \iffalse
 ```
 open import Types using (Kind)
---open import Types hiding (TContext;_⊢_⦂e;_⊢_⦂effs;_⊢_⦂t;_⊢_<⦂_;_⊢_<t⦂_;_∋t_⦂_ )
 
 open import Data.Nat using (ℕ;zero;suc;_+_;_≤_;_<_)
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
+import Data.Vec
+import Data.Fin
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open Relation.Binary.PropositionalEquality.≡-Reasoning
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
@@ -140,7 +141,8 @@ module Typing where
 
     push : Kind → TContext → TContext
     push k Δ = Δ , k 
-    EContext = ℕ
+    EContext = Σ[ n ∈ ℕ ] Data.Vec.Vec (Type × Effects) n
+    pattern ∅' = 0 ,, Data.Vec.[]
 ```
 \iffalse
 ```
@@ -160,16 +162,19 @@ module Typing where
             → Δ    ∋t x ⦂ k
             → Δ , y   ∋t suc(x) ⦂ k
 
-    infix  4  _∋l_
-    _∋l_ : EContext → Label → Set
-    Θ ∋l n = n < Θ
+    infix  4  _∋l_⦂_/_
+    data _∋l_⦂_/_ : EContext → Label → Type → Effects → Set where
+      ∋label : ∀ {Θ n} 
+        → (t : n < proj₁ Θ)
+        → Θ ∋l n ⦂ Data.Vec.lookup ( Θ .proj₂ )(Data.Fin.fromℕ< t) .proj₁ / Data.Vec.lookup ( Θ .proj₂ )(Data.Fin.fromℕ< t) .proj₂
+        
     infix  4  _⨾_⊢_⦂e
     data _⨾_⊢_⦂e : TContext → EContext → Type → Set where
         ⊢ttv : ∀ {Δ Θ n}
             → Δ ∋t n ⦂ Kind.E
             → Δ ⨾ Θ ⊢ ttv n ⦂e
-        ⊢alloc : ∀ {Δ Θ n}
-            → Θ ∋l n
+        ⊢alloc : ∀ {Δ Θ n A E}
+            → Θ ∋l n ⦂ A / E
             → Δ ⨾ Θ ⊢ Effect n  ⦂e
     infix  4  _⨾_⊢_⦂t
     infix  4  _⨾_⊢_⦂effs
@@ -297,11 +302,10 @@ Most of typing judgement are working as before.
             → Δ ⨾ Θ ⨾ Γ   ⊢ reset₀ e en e' ⦂ B / E'
 
 ```
-Best we can do statically here is checking that label value really corresponds.
-To prove prove safety we need to add extra conditions on label expressions. That is every label with same value needs to have same type (modulo type indices). Such extra condition would have to be passed to progress, and preservation would need to also prove that such condition is kept.
+
 ```
-        ⊢label : ∀ {n}
-            → Θ ∋l n
+        ⊢label : ∀ {n }
+            → Θ ∋l n ⦂ A / E
             --------------------------------------------
             → Δ ⨾ Θ ⨾ Γ ⊢ label n ⦂ (L (Effect n) at A / E) / F
 
@@ -353,12 +357,12 @@ module Transform where
         runtime∋ (S z) = S (runtime∋ z)
         
         runtime⊢e : ∀ {Δ T}
-          → Δ Types.Typing.⊢ T ⦂e → (runtimeΔ Δ) ⨾ 0 ⊢ rt-t T ⦂e
+          → Δ Types.Typing.⊢ T ⦂e → (runtimeΔ Δ) ⨾ ∅' ⊢ rt-t T ⦂e
         runtime⊢e  (⊢ttv x) = ⊢ttv (runtime∋t x)
         runtime⊢t : ∀ {Δ T}
-          → Δ Types.Typing.⊢ T ⦂t → (runtimeΔ Δ) ⨾ 0 ⊢ rt-t T ⦂t
+          → Δ Types.Typing.⊢ T ⦂t → (runtimeΔ Δ) ⨾ ∅' ⊢ rt-t T ⦂t
         runtime⊢effs : ∀ {Δ T}
-          → Δ Types.Typing.⊢ T ⦂effs → (runtimeΔ Δ) ⨾ 0 ⊢ rt-t' T ⦂effs
+          → Δ Types.Typing.⊢ T ⦂effs → (runtimeΔ Δ) ⨾ ∅' ⊢ rt-t' T ⦂effs
         runtime⊢t (⊢ttv x) = ⊢ttv (runtime∋t x)
         runtime⊢t (⊢-> x x₁ x₂) = ⊢-> (runtime⊢t x)
           (runtime⊢effs x₁) (runtime⊢t x)
@@ -398,9 +402,9 @@ module Transform where
           rt-t'-subst : ∀ A B → ((rt-t' A) TypeSubst.effs[t rt-t B ] ) ≡
             (rt-t' (A Types.TypeSubst.effs[t B ] ))
           rt-tapp : ∀ {Δ Γ e A B E}
-           → runtimeΔ Δ ⨾ 0 ⨾ runtimeΓ Γ ⊢ tapp (runtime e) (rt-t B) ⦂
+           → runtimeΔ Δ ⨾ ∅' ⨾ runtimeΓ Γ ⊢ tapp (runtime e) (rt-t B) ⦂
            (rt-t A) TypeSubst.[ rt-t B ] / (rt-t' E TypeSubst.effs[t rt-t B ])
-           → runtimeΔ Δ ⨾ 0 ⨾ runtimeΓ Γ ⊢ tapp (runtime e) (rt-t B) ⦂
+           → runtimeΔ Δ ⨾ ∅' ⨾ runtimeΓ Γ ⊢ tapp (runtime e) (rt-t B) ⦂
            rt-t (A Types.TypeSubst.[ B ]) /
            rt-t' (E Types.TypeSubst.effs[t B ])
 
@@ -409,15 +413,15 @@ module Transform where
 
 ```
         rt-bump : ∀ {Δ Γ e A E k}
-          → (runtimeΔ Δ , k  ⨾ 0 ⨾ runtimeΓ Γ ⊢ runtime e ⦂
+          → (runtimeΔ Δ , k  ⨾ ∅' ⨾ runtimeΓ Γ ⊢ runtime e ⦂
           rt-t (Types.TypeSubst.bump A) /
           rt-t' (Types.TypeSubst.bump' E))
-          → (runtimeΔ Δ , k  ⨾ 0 ⨾ runtimeΓ Γ ⊢ runtime e ⦂
+          → (runtimeΔ Δ , k  ⨾ ∅' ⨾ runtimeΓ Γ ⊢ runtime e ⦂
           TypeSubst.bump (rt-t A) / TypeSubst.bump' (rt-t' E))
         rt-bump {A = A} {E = E} t rewrite rt-bump-t suc A rewrite rt-bump-e suc E = t
 
         runtime-types : ∀ {Δ Γ  e T E}
-          → Δ Types.Typing., Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ 0 ⨾ runtimeΓ Γ ⊢ (runtime e) ⦂ rt-t T / rt-t' E)
+          → Δ Types.Typing., Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ ∅' ⨾ runtimeΓ Γ ⊢ (runtime e) ⦂ rt-t T / rt-t' E)
 
         runtime-types (⊢var x) = ⊢var ( runtime∋ x )
         runtime-types (⊢lam t) = ⊢lam (runtime-types t)
