@@ -3,8 +3,10 @@
 ```
 module Progress where 
 open import Data.Nat using (ℕ;zero;suc;_+_)
+open import Types using (Kind)
 open import Runtime
 open  Runtime.RuntimeExpr
+open RExprSubstTyped 
 open Runtime.Types_
 open Runtime.Typing
 
@@ -12,6 +14,7 @@ import Data.Maybe
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
+import Data.Vec
 
 import Data.Nat.Properties
 ```
@@ -196,41 +199,41 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 Since labels need to be allocated, reduction relation is defined in terms of expression and state. State itself is just next label to be allocated.
 As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
 ```
-{-
 infix 2 _↦_
-State = ℕ
+State = EContext
 data _↦_ : RExpr × State → RExpr × State → Set where
-  
- ↦new : ∀ {e s Δ Θ E T A1 E1}
+ {-
+ ↦new : ∀ {e Δ Θ E T A1 E1}
   → {te : (Δ , Kind.E) ⨾ Θ ⨾(∅ , L ttv zero at A1 / E1)  ⊢ e ⦂ E / T}
-  → new e ,′ s  ↦ new' s ( RExprSubstTyped._[_] e (label s) {te = te} {te1 = ⊢label Z} .proj₁ ) ,′ suc s
-
- β-lam-app : ∀ {e V s Δ Γ A B E}
-  → {te : Δ ⨾ (Γ , A) ⊢ e ⦂ B / E}
-  → {tv : Δ ⨾ Γ ⊢ V ⦂ A / E}
+  → new e ,′ Θ  ↦  RExprSubstTyped._[_] e (label (Θ .proj₁)) {te = te} {te1 = {!!}} .proj₁  ,′ Θ --(Data.Vec._++_ Θ (  Data.Vec._⧺_ (A1 ,′ E1) Data.Vec.[]))
+ -}
+ β-lam-app : ∀ {e V Θ Γ A B E }
+  → {te : ∅ ⨾ Θ ⨾ (Γ , A) ⊢ e ⦂ B / E}
+  → {tv : ∅ ⨾ Θ ⨾ Γ ⊢ V ⦂ A / E}
   → Value (lam e)
   → (v : Value V)
-  → app (lam e) V ,′ s ↦ (proj₁ (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})) ,′ s
+  → app (lam e) V ,′ Θ ↦ (proj₁ (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})) ,′ Θ
 
- β-tlam-tapp : ∀ {k e T s}
+ β-tlam-tapp : ∀ {k e T Θ}
    → Value (tlam k e)
-   → tapp (tlam k e) T ,′ s ↦ e RExprSubst.e[t T ]  ,′ s
+   → tapp (tlam k e) T ,′ Θ ↦ e RExprSubst.e[t T ]  ,′ Θ
 
- reset₀-vl : ∀ {V e' en s Δ Γ A B E }
-   → ( v : Value V)
-  → {tv : Δ ⨾ Γ ⊢ V ⦂ A / E}
-  → {ten : Δ ⨾ (Γ , A) ⊢ en ⦂ B / E}
-   → reset₀ V en e' ,′ s ↦ (RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁) ,′ s
+ reset₀-vl : ∀ {V e' en  Θ Γ A B E }
+  → ( v : Value V)
+  → {tv : ∅ ⨾ Θ ⨾ Γ ⊢ V ⦂ A / E}
+  → {ten : ∅ ⨾ Θ ⨾ (Γ , A) ⊢ en ⦂ B / E}
+  → reset₀ V en e' ,′ Θ ↦ (RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁) ,′ Θ
 
- reset₀-k : ∀ {es en e' e s n Δ Δ' A T Eff Eff' B A' E' ls lr}
-   → { f : Metaframe Δ ∅ T Eff A Eff' Δ' n }
+{-
+ reset₀-k : ∀ {es en e' e s n Θ A T Eff Eff' B A' E' ls lr}
+   → { f : Metaframe Θ ∅ T Eff A Eff'  }
    → ∀ {cont-type}
    -> Value (e')
    --shift
-   → {ts : Δ' ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
-   → {tes : Δ' ⨾ (∅ , T - Eff' > B) ⊢ es ⦂ B / Eff' }
-   → {tls : Δ' ⨾ ∅ ⊢ e' ⦂ (L ttv ls at B / Eff') /  nil }
-   → {tlvs : Δ'  ⊢  ttv lr ⦂e }
+   → {ts : ∅ ⨾ Θ ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
+   → {tes : ∅ ⨾ Θ ⨾ (∅ , T - Eff' > B) ⊢ es ⦂ B / Eff' }
+   → {tls : ∅ ⨾ Θ ⨾ ∅ ⊢ e' ⦂ (L ttv ls at B / Eff') /  nil }
+   → {tlvs : ∅ ⨾ Θ  ⊢  ttv lr ⦂e }
    --reset
    → {te : Δ ⨾ ∅ ⊢ e ⦂ A' / (ttv lr ∷ E') }
    → {ten : Δ ⨾ ∅ , A' ⊢ en ⦂ T / Eff }
@@ -242,7 +245,8 @@ data _↦_ : RExpr × State → RExpr × State → Set where
        (lam (reset₀ (proj₁ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z))) en e'))
        {te = tes} {te1 = gvalue {E = Eff} vlam cont-type}
        .proj₁  ,′ s
--}
+ -}
+
 ```
  Since simple reduction above is defined directly on redexes, we introduce -→ that represents reduction within metaframe.
  As we are only considering whole typed expressions, in place of `Γ` we use empty context. 
