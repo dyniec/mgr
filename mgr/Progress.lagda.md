@@ -15,6 +15,7 @@ open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) us
 open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 import Data.Vec
+import Data.Fin
 
 import Data.Nat.Properties
 ```
@@ -199,6 +200,47 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 Since labels need to be allocated, reduction relation is defined in terms of expression and state. State itself is just next label to be allocated.
 As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
 ```
+pb : EContext → (Type × Effects) → EContext
+pb (n ,, v) x = suc n ,, pb-v v x where
+    pb-v : ∀ {n} {A : Set} → Data.Vec.Vec A n → A → Data.Vec.Vec A (suc n)
+    pb-v {n} xs x rewrite Data.Nat.Properties.+-comm 1 n = Data.Vec._++_ xs  (Data.Vec.[_] x)
+pb-len : ∀ Θ x → suc (proj₁ Θ) ≡ pb Θ x .proj₁
+pb-len Θ x = refl
+postulate
+    pb-lookup : ∀ Θ x i → (t : i Data.Nat.< (Θ .proj₁) )
+     → Data.Vec.lookup (Θ .proj₂)
+        (Data.Fin.fromℕ< t)
+     ≡ Data.Vec.lookup ( (pb Θ x) .proj₂)
+        (Data.Fin.fromℕ< (Data.Nat.s≤s t))
+    ↑Θ∋l : ∀ {Θ n T E x} →  Θ ∋l n ⦂ T / E  →  pb Θ x ∋l n ⦂ T / E
+-- pb-lookup Θ x i t rewrite pb-len Θ x = {!!}
+-- ↑Θ∋l {Θ} {n} {T} {E} {x} (∋label t) rewrite pb-lookup Θ x n t rewrite pb-len Θ x = {!∋label {Θ = pb Θ x} t!}
+--∋label {Θ = pb Θ x} {!  (Data.Nat.s≤s t)!}
+-- ∋label {! t!}
+↑Θ⊢e : ∀ {Δ Θ x T} → Δ ⨾ Θ ⊢ T ⦂e → Δ ⨾ pb Θ x ⊢ T ⦂e
+↑Θ⊢e (⊢ttv x) = ⊢ttv x
+↑Θ⊢e (⊢alloc x) = ⊢alloc (↑Θ∋l x)
+↑Θ⊢effs : ∀ {Δ Θ x T} → Δ ⨾ Θ ⊢ T ⦂effs → Δ ⨾ pb Θ x ⊢ T ⦂effs
+↑Θ⊢effs ⊢nil = ⊢nil
+↑Θ⊢effs (⊢cons x x₁) = ⊢cons (↑Θ⊢e x) (↑Θ⊢effs x₁)
+↑Θ⊢t : ∀ {Δ Θ x T} → Δ ⨾ Θ ⊢ T ⦂t → Δ ⨾ pb Θ x ⊢ T ⦂t
+↑Θ⊢t (⊢ttv x) = ⊢ttv x
+↑Θ⊢t (⊢-> x x₁ x₂) = ⊢-> (↑Θ⊢t x) (↑Θ⊢effs x₁) (↑Θ⊢t x)
+↑Θ⊢t (⊢forall x x₁) = ⊢forall (↑Θ⊢t x) (↑Θ⊢effs x₁)
+↑Θ⊢t (⊢label x x₁ x₂) = ⊢label (↑Θ⊢e x) (↑Θ⊢t x₁) (↑Θ⊢effs x₂)
+↑Θ : ∀ { e Δ Θ Γ A E x} →  Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ A / E → Δ ⨾ pb Θ x ⨾ Γ ⊢ e ⦂ A / E
+↑Θ (⊢var x) = ⊢var x
+↑Θ (⊢lam t) = ⊢lam (↑Θ t)
+↑Θ (⊢weak x x₁ t) = ⊢weak x x₁ (↑Θ t)
+↑Θ (⊢app t t₁) = ⊢app (↑Θ t) (↑Θ t₁)
+↑Θ (⊢forall t) = ⊢forall (↑Θ t)
+↑Θ (⊢tapp x t) = ⊢tapp (↑Θ⊢t x) (↑Θ t)
+↑Θ (⊢new t) = ⊢new (↑Θ t)
+↑Θ (⊢shift₀ x t t₁) = ⊢shift₀ (↑Θ⊢e x) (↑Θ t) (↑Θ t₁)
+↑Θ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (↑Θ⊢e x ) (↑Θ t) (↑Θ t₁) (↑Θ t₂)
+↑Θ (⊢label x) = ⊢label (↑Θ∋l x)
+--new-subst : ∀ {e Θ A1 E1 T E} → { ( ∅ , Kind.E) ⨾ Θ ⨾ ( ∅ , L ttv zero at A1 E1) ⊢ e ⦂ T / E)
+--  → Σ[ e' ∈ RExpr ] 
 infix 2 _↦_
 State = EContext
 data _↦_ : RExpr × State → RExpr × State → Set where
