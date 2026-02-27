@@ -14,6 +14,7 @@ Here we define type erased expressions. And translation from previous `RExpr` ty
 Type abstraction is translated to normal abstraction, and type application is translated to application
 of identity function (it won't be used regardless of value).
 ```
+{-
 data Erased : Set where
   var : ℕ → Erased
   lam : Erased → Erased
@@ -34,9 +35,11 @@ erased (RuntimeExpr.new' x x₁) = erased x₁
 erased (RuntimeExpr.shift₀ x x₁) = shift₀ (erased x) (erased x₁)
 erased (RuntimeExpr.reset₀ x x₁ x₂) = reset₀ (erased x) (erased x₁) (erased x₂)
 erased (RuntimeExpr.label x) = label x
+-}
 ```
 Here we present draft of machine, together with draft of evaluation function.
 ```
+{-
 Env : Set
 data Val : Set
 data Context : Set
@@ -64,6 +67,7 @@ data State : Set where
   
 init : Erased → State
 init e = eval e []  ( (end ,′ Maybe.nothing) ∷ []) zero
+-}
 {-
 lookup : ∀ {A} ℕ → List A → Maybe A
 lookup n xs = head(drop n xs) 
