@@ -200,10 +200,10 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 Since labels need to be allocated, reduction relation is defined in terms of expression and state. State itself is just next label to be allocated.
 As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
 ```
+pb-v : ∀ {n} {A : Set} → Data.Vec.Vec A n → A → Data.Vec.Vec A (suc n)
+pb-v {n} xs x rewrite Data.Nat.Properties.+-comm 1 n = Data.Vec._++_ xs  (Data.Vec.[_] x)
 pb : EContext → (Type × Effects) → EContext
-pb (n ,, v) x = suc n ,, pb-v v x where
-    pb-v : ∀ {n} {A : Set} → Data.Vec.Vec A n → A → Data.Vec.Vec A (suc n)
-    pb-v {n} xs x rewrite Data.Nat.Properties.+-comm 1 n = Data.Vec._++_ xs  (Data.Vec.[_] x)
+pb (n ,, v) x = suc n ,, pb-v v x
 pb-len : ∀ Θ x → suc (proj₁ Θ) ≡ pb Θ x .proj₁
 pb-len Θ x = refl
 postulate
@@ -239,6 +239,14 @@ postulate
 ↑Θ (⊢shift₀ x t t₁) = ⊢shift₀ (↑Θ⊢e x) (↑Θ t) (↑Θ t₁)
 ↑Θ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (↑Θ⊢e x ) (↑Θ t) (↑Θ t₁) (↑Θ t₂)
 ↑Θ (⊢label x) = ⊢label (↑Θ∋l x)
+postulate
+  pb-v-last : ∀ {n} {A : Set} → (xs : Data.Vec.Vec A n) → (x : A) → Data.Vec.lookup (pb-v xs x) (Data.Fin.fromℕ n) ≡ x
+  pb-last : ∀ { Θ x }
+    → (pb Θ x) ∋l (Θ .proj₁) ⦂ Data.Vec.lookup (pb Θ x .proj₂) (Data.Fin.fromℕ (Θ .proj₁)) .proj₁ / Data.Vec.lookup (pb Θ x .proj₂) (Data.Fin.fromℕ (Θ .proj₁)) .proj₂
+--pb-v-last {zero} Data.Vec.[] x = refl
+--pb-v-last {suc n} (x₁ Data.Vec.∷ xs) x rewrite pb-v-last xs x  = refl
+--pb-last = {!!}
+  
 --new-subst : ∀ {e Θ A1 E1 T E} → { ( ∅ , Kind.E) ⨾ Θ ⨾ ( ∅ , L ttv zero at A1 E1) ⊢ e ⦂ T / E)
 --  → Σ[ e' ∈ RExpr ] 
 infix 2 _↦_
