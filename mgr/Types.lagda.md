@@ -7,7 +7,6 @@ open import Data.List using (List;_∷_;map) renaming ([] to nil)
 open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 ```
 \fi
-In this section we define syntax of the base language and types.
 
 # Kinds, Types, Effects and Expressions
 Variable and type variables are de Bruijn indices.
@@ -17,7 +16,7 @@ data Kind : Set where
     T : Kind
     E : Kind 
 ```
-Types  and Effects are defined mutally recursive. Type is either variable, arrow, forall or label. Effect is list of types, it's stored in arrow and forall constructor to keep effects of computation underneath. Label type just stores Type and Effect of other computation.
+Types  and Effects are defined mutally recursive. Type is either variable, arrow, forall or label. Effect is list of types, it's used in arrow and forall constructors of type to keep effects of computation underneath and it will be used in typing judgement. Label contructor just stores type variable bound to effect represented by the label and then Type and Effect of delimited computation.
 ```
 module Types where
     Id : Set
@@ -32,9 +31,11 @@ module Types where
     Effects = List Type
 open Types
 ```
-`var`, `lam`, `app`, `tlam`, `tapp` are behaving as expected, with the only exception being that `tlam` holds kind of parameter. `new` bind label that is used by next constructions to pair up. `shift₀` when evaluated finds `reset₀` is handling same label, continuation between them is captured (including reset) and passed into computation under shift as variable.
+Constructors of expressions such as `var`, `lam`, `app`, `tlam`, `tapp` behave as usual.
+`var` is de Bruijn indexed variable, `lam` is lambda abstraction, `app` is function application, `tlam` is type abstraction, but it stores Kind of abstracted type and `tapp` is type application.
+The rest of constructors are responsible for continuations and labels. Constructor `new` bind label that is used by shift₀ and reset₀ constructors to pair up. `shift₀` stores label and expression (parametrized by continuation) that replaces whole delimited computation. Last constructor of expressions is `reset₀` which has 3 fields, first is label that is used to match up reset with shifts. Second argument is delimited computation where `shift₀` can be used. So when `shift₀ k.e` is being evaluated it aborts enclosing corresponding reset, instead of it now `e` is being evaluated with `k` bound to continuation representing evaluation context between shift and it's reset.
+Last field `x. en` is used when during evaluation of second expression no corresponding shift aborts, and just yields value `v` - then whole reset₀ evaluates to `en` where `x` is bound to `v`.
 
-Type substitution in types is removed for brevity. It's available in accompanying repository.
 
 ```
 module Expr where
@@ -121,7 +122,9 @@ module Typing where
     data TContext : Set where
         ∅ : TContext
         _,_ : TContext → Kind → TContext
-
+```
+\iffalse
+```
     infix  4  _∋_⦂_
     data _∋_⦂_ : Context → Id → Type → Set where
         Z : ∀ {Γ  A}
@@ -138,10 +141,7 @@ module Typing where
         S : ∀ {Δ x y k}
             → Δ ∋t x ⦂ k
             → (Δ , y)  ∋t (suc x) ⦂ k
-```
-\iffalse
 
-```
     data _⊢_⦂e : TContext → Type → Set where
         ⊢ttv : ∀ {Δ n}
             → Δ ∋t n ⦂ E
@@ -173,11 +173,6 @@ module Typing where
             → Δ ⊢ e ⦂e 
             → Δ ⊢ effs ⦂effs
             → Δ ⊢ e ∷ effs ⦂effs
-```
-\fi
-# Typing judgements
-Expressions are extrinsically typed, thus typing judgements are represented separately.
-```
     data _⊢_<⦂_ : TContext → Effects → Effects → Set where
         Z : ∀ {Δ}
             → Δ ⊢ nil <⦂ nil
@@ -206,7 +201,11 @@ Expressions are extrinsically typed, thus typing judgements are represented sepa
             → Δ ⊢ E1 <⦂ E2
             → Δ ⊢ forallt k A1 E1 <t⦂ forallt k A2 E2
 ```
-Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The only difference is that expressions for values are generic over effect they execute.
+\fi
+
+# Typing judgements
+Expressions are extrinsically typed, thus typing judgements are represented separately.
+Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The noticable difference is that expressions for values are generic over effect they execute.
 ```
     data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
         ⊢var : ∀ {Γ Δ x A E}
@@ -243,7 +242,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 ```
-`new` introduces new type variable, and variable that represent effect and label. Type of label stores type of label (here `ttv zero`). `A1` / `A2` represent type and effect of corresponding reset.
+`new` introduces new type variable, and variable that represent respectively effect and label. Type of label stores effect bound by label (here `ttv zero`). `A1` / `A2` represent type and effect of delimited computation.
 ```
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
             → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E

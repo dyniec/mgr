@@ -1,4 +1,4 @@
-# Runtime
+# Runtime language
 Since grammar of terms doesn't have any expression that would have type of label, and shift and reset require same labels, that would mean that reduction relation would need to go under `new` binders. Instead we will define another expression language expanded by notion of label values.
 
 When `new` expression is evaluated then all occurences of variables bound by it would have it replaced with newly allocated label value. That means evaluation would need to keep a state for allocator.
@@ -22,7 +22,10 @@ open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 open Relation.Binary.PropositionalEquality.≡-Reasoning
 open import Data.Product using (_×_;_,′_;Σ-syntax) renaming (_,_ to _,,_) using (proj₁;proj₂)
 import Data.Maybe
+```
+\fi
 
+```
 module Types_ where
     Id : Set
     Id = ℕ
