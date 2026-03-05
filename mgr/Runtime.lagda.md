@@ -3,9 +3,8 @@ Since grammar of terms doesn't have any expression that would have type of label
 
 When `new` expression is evaluated then all occurences of variables bound by it would have it replaced with newly allocated label value. That means evaluation would need to keep a state for allocator.
 
-Since `new` binds type variables that represent effects, and those type variables are present in typing judgements of subexpressions, complete removal of `new` during evaluation would break type preservation. Thus we introduce `new'` that just binds type variables, and stores allocated label.
+To ensure type safety we will expand syntax of types with allocated effects, and add new effect context to typing judgmenents, that maps allocations to type and effect of delimiter.
 
-To make sure that label values bound to same type variable have same values, we change typing context so it stores label bound to that type variable.
 ```
 module Runtime where
 ```
@@ -128,8 +127,8 @@ And here we have separate term for labels, it just stores label identifier.
 
 ```
 \fi
-Typing Context now has different representation, because we store labels for typing variables bound by `new'`.
-Thus all of judgements using them need to be redefined for the runtime language.
+Since grammar of types has changed, we need to redefine contexts. Unfortunately almost all of typing judgements need to be redefined.
+Here we also introduce new context for effects, it's just finite vector of types and effects. Since they are only used during evaluation, the types and effects have no free variables.
 ```
 module Typing where
     open RuntimeExpr
@@ -305,7 +304,7 @@ Most of typing judgement are working as before.
             → Δ ⨾ Θ ⨾ Γ   ⊢ reset₀ e en e' ⦂ B / E'
 
 ```
-
+Since labels are represented by natural numbers, ensuring type of label is just a lookup in apropriate context.
 ```
         ⊢label : ∀ {n }
             → Θ ∋l n ⦂ A / E
@@ -315,7 +314,7 @@ Most of typing judgement are working as before.
 ```
 # Runtime embedding
 We defined embedding of original language in current one, and proof that such embedding preserves typing judgements.
-Part of proof is skipped as it goes through almost all judgement types.
+Part of proof is ommited as it goes through almost all judgement types.
 ```
 module Transform where
         open Types.Typing
@@ -411,10 +410,6 @@ module Transform where
            rt-t (A Types.TypeSubst.[ B ]) /
            rt-t' (E Types.TypeSubst.effs[t B ])
 
-```
-\fi
-
-```
         rt-bump : ∀ {Δ Γ e A E k}
           → (runtimeΔ Δ , k  ⨾ ∅' ⨾ runtimeΓ Γ ⊢ runtime e ⦂
           rt-t (Types.TypeSubst.bump A) /
@@ -422,6 +417,10 @@ module Transform where
           → (runtimeΔ Δ , k  ⨾ ∅' ⨾ runtimeΓ Γ ⊢ runtime e ⦂
           TypeSubst.bump (rt-t A) / TypeSubst.bump' (rt-t' E))
         rt-bump {A = A} {E = E} t rewrite rt-bump-t suc A rewrite rt-bump-e suc E = t
+```
+\fi
+
+```
 
         runtime-types : ∀ {Δ Γ  e T E}
           → Δ Types.Typing., Γ ⊢ e ⦂ T / E → (runtimeΔ Δ ⨾ ∅' ⨾ runtimeΓ Γ ⊢ (runtime e) ⦂ rt-t T / rt-t' E)
@@ -448,12 +447,15 @@ y ⧺ (xs , x) = (y ⧺ xs) , x
 ∋↑ : ∀ {Γ x A Γ'}
     → Γ ∋ x ⦂ A
     → Γ' ⧺ Γ ∋ x ⦂ A
-∋↑ {Γ = ∅} ()
-∋↑ {Γ = Γ , x} Z = Z
-∋↑ {Γ = Γ , x} (S t) =  S (∋↑ t)
 e↑ : ∀ {Δ Θ Γ e T E Γ'}
     → Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ T / E
     → Δ ⨾ Θ ⨾ (Γ' ⧺ Γ) ⊢ e ⦂ T / E
+```
+\iffalse
+```
+∋↑ {Γ = ∅} ()
+∋↑ {Γ = Γ , x} Z = Z
+∋↑ {Γ = Γ , x} (S t) =  S (∋↑ t)
 e↑ (⊢var x) = ⊢var (∋↑ x)
 e↑ (⊢lam t) = ⊢lam (e↑ t)
 e↑ (⊢weak x x₁ t) = ⊢weak x x₁ (e↑ t)
@@ -466,7 +468,8 @@ e↑ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ x (e↑ t) (e↑ t₁) (e↑ t₂
 e↑ (⊢label x) = ⊢label x
 
 ```
-Substitution and proof relating typing judgement of inputs and result are defined together inductively.
+\fi
+Substitution and proof of type preservation in substitution are defined at the same time.
 ```
 
 module RExprSubstTyped where
@@ -474,12 +477,33 @@ module RExprSubstTyped where
     ext : ∀ {Γ Γ' }
         → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
         → (∀ {A B n} → (Γ , B) ∋ n ⦂ A → Σ[ m ∈ ℕ ] (Γ' , B) ∋ m ⦂ A)
-    ext ρ Z = zero ,, Z
-    ext ρ (S x) = suc (ρ x .proj₁) ,, S (ρ x .proj₂)
-
     rename : ∀ {Γ Γ'}
         → (∀ {A n } → Γ ∋ n ⦂ A → Σ[ m ∈ ℕ ] Γ' ∋ m ⦂ A)
         → (∀ {Δ Θ A e E} → Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ A / E →  Σ[ e' ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e' ⦂ A / E)
+    exts : ∀ {Γ Γ' Δ Θ}
+        → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+        → (∀ {n A B E} → Γ , B ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' , B ⊢ e ⦂ A / E)
+    subst : ∀ {Δ Γ Γ' Θ}
+        → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
+        → (∀ {e A E} → Δ ⨾ Θ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ'  ⊢ e ⦂ A / E)
+
+    _[_] : ∀ {Δ Θ Γ A B E1}
+        → (e e1 : RExpr)
+        → {te : Δ ⨾ Θ ⨾ Γ , A ⊢ e ⦂ B / E1}
+        → {te1 : ∀ {E } → Δ ⨾ Θ ⨾ Γ ⊢ e1 ⦂ A / E}
+        → Σ[ e' ∈ RExpr ] Δ ⨾ Θ ⨾ Γ ⊢ e' ⦂ B / E1
+    _[_] {Δ}{Θ}{Γ}{A}{B}{E1}e e1 {te}{te1} = subst {Δ}{Γ , A}{Γ} σ  te
+        where
+        σ : (∀ {B n E} →  Γ , A ∋ n ⦂ B  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ B / E)
+        σ {E = E'} Z = e1 ,, (te1 {E'})
+        σ {n = suc n} (S x) = var n ,, ⊢var x
+
+```
+\iffalse
+```
+    ext ρ Z = zero ,, Z
+    ext ρ (S x) = suc (ρ x .proj₁) ,, S (ρ x .proj₂)
+
     rename ρ (⊢var { x = n } x) = (var (ρ x .proj₁)) ,, (⊢var (ρ x .proj₂) )
     rename ρ (⊢lam x) = (lam (rename (ext ρ) x .proj₁)) ,, (⊢lam (proj₂ (rename (ext ρ) x) ) )
     rename ρ (⊢weak x x₁ x₂ ) = (rename ρ x₂ .proj₁) ,, ⊢weak x x₁ (rename ρ x₂ .proj₂)
@@ -500,15 +524,9 @@ module RExprSubstTyped where
         eΔ :  ∀ {Γ Γ' Δ k Θ}
             → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
             → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ]  Δ , k ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
-    exts : ∀ {Γ Γ' Δ Θ}
-        → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
-        → (∀ {n A B E} → Γ , B ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' , B ⊢ e ⦂ A / E)
     exts ρ Z = (var zero) ,, (⊢var Z) 
     exts ρ (S x)  = rename (λ {A = A₁} {n} z → suc n ,, S z) (ρ x .proj₂)
 
-    subst : ∀ {Δ Γ Γ' Θ}
-        → (∀ {n A E} →  Γ ∋ n ⦂ A  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ' ⊢ e ⦂ A / E)
-        → (∀ {e A E} → Δ ⨾ Θ ⨾ Γ  ⊢ e ⦂ A / E → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ'  ⊢ e ⦂ A / E)
     subst σ (⊢var x) = σ x
     subst σ (⊢lam x) = lam (subst (exts σ) x .proj₁) ,, ⊢lam (subst (exts σ) x .proj₂)
     subst σ (⊢weak x x₁ x₂) = subst σ x₂ .proj₁ ,, ⊢weak x x₁ (subst σ x₂ .proj₂)
@@ -523,17 +541,6 @@ module RExprSubstTyped where
         ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
     subst σ (⊢label {n = n} x) = label n ,, ⊢label x
 
-    _[_] : ∀ {Δ Θ Γ A B E1}
-        → (e e1 : RExpr)
-        → {te : Δ ⨾ Θ ⨾ Γ , A ⊢ e ⦂ B / E1}
-        → {te1 : ∀ {E } → Δ ⨾ Θ ⨾ Γ ⊢ e1 ⦂ A / E}
-        → Σ[ e' ∈ RExpr ] Δ ⨾ Θ ⨾ Γ ⊢ e' ⦂ B / E1
-    _[_] {Δ}{Θ}{Γ}{A}{B}{E1}e e1 {te}{te1} = subst {Δ}{Γ , A}{Γ} σ  te
-        where
-        σ : (∀ {B n E} →  Γ , A ∋ n ⦂ B  → Σ[ e ∈ RExpr ] Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ B / E)
-        σ {E = E'} Z = e1 ,, (te1 {E'})
-        σ {n = suc n} (S x) = var n ,, ⊢var x
-
 
 ```
-
+\fi

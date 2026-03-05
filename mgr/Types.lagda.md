@@ -33,8 +33,8 @@ open Types
 ```
 Constructors of expressions such as `var`, `lam`, `app`, `tlam`, `tapp` behave as usual.
 `var` is de Bruijn indexed variable, `lam` is lambda abstraction, `app` is function application, `tlam` is type abstraction, but it stores Kind of abstracted type and `tapp` is type application.
-The rest of constructors are responsible for continuations and labels. Constructor `new` bind label that is used by shift₀ and reset₀ constructors to pair up. `shift₀` stores label and expression (parametrized by continuation) that replaces whole delimited computation. Last constructor of expressions is `reset₀` which has 3 fields, first is label that is used to match up reset with shifts. Second argument is delimited computation where `shift₀` can be used. So when `shift₀ k.e` is being evaluated it aborts enclosing corresponding reset, instead of it now `e` is being evaluated with `k` bound to continuation representing evaluation context between shift and it's reset.
-Last field `x. en` is used when during evaluation of second expression no corresponding shift aborts, and just yields value `v` - then whole reset₀ evaluates to `en` where `x` is bound to `v`.
+The rest of constructors are responsible for continuations and labels. Constructor `new` bind label that is used by shift₀ and reset₀ constructors to pair up. `shift₀` stores label and expression (parametrized by continuation) that replaces whole delimited computation. Last constructor of expressions is `reset₀` which has 3 fields, last one is label that is used to match up reset with shifts. First argument is delimited computation where `shift₀` can be used. So when `shift₀ k.e` is being evaluated it aborts enclosing corresponding reset, instead of it now `e` is being evaluated with `k` bound to continuation representing evaluation context between shift and it's reset.
+Second field `x. en` is used when during evaluation of first expression no corresponding shift aborts, and just yields value `v` - then whole reset₀ evaluates to `en` where `x` is bound to `v`.
 
 
 ```
@@ -249,7 +249,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             -----------------------
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
-`shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this continuation should be function type from type of shift to reset, with effects visible in reset. Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
+`shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this expression should take continuation and returns same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
 
 ```
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
