@@ -1,4 +1,3 @@
-# Values
 \iffalse
 ```
 module Progress where 
@@ -20,6 +19,7 @@ import Data.Fin
 import Data.Nat.Properties
 ```
 \fi
+# Values
 Here we define values. Only abstractions, type abstractions and labels are considered values.
 Since values themself don't perform any effects, they have `nil` effect. But rules for all of
 them have built-in weakinging. We can use that to generalize their type and perform substiution
@@ -30,7 +30,6 @@ data Value : RExpr -> Set where
     vLam : ∀ { k e } → Value (tlam k e)
     vlab : ∀ { n } → Value (label n)
 gvalue : ∀ {Δ Θ Γ T E e} → (Value e) → (Δ ⨾ Θ ⨾  Γ ⊢ e ⦂ T / E) → ∀ {F} → (Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ T / F)
---generalize value to any effect
 gvalue vlam (⊢lam t) = ⊢lam t
 gvalue vLam (⊢forall t) = ⊢forall t
 gvalue vlab (⊢label x) = ⊢label x
@@ -125,19 +124,23 @@ Lifting frames into arbitrary context preserves types, same as with expressions.
 ↑f : forall { Θ A B Eff Eff'  Γ' Γ}
   → Frame Θ Γ      A Eff B Eff' 
   → Frame Θ  (Γ' ⧺ Γ) A Eff B Eff' 
+```
+\iffalse
+```
 ↑f fempty = fempty
 ↑f (fapp₁ f e {t}) = fapp₁ (↑f f) e {e↑ t}
 ↑f (fapp₂ e {v} {t} f) = fapp₂ e {v} {e↑ t} (↑f f)
 ↑f (freset-label e en x x₁ x₂ f) = freset-label e en x (e↑ x₁) (e↑ x₂) (↑f f)
 ↑f (fshift-label e x x₁ f) = fshift-label e x (e↑ x₁) (↑f f)
 ```
+\fi
 Metaframe stores whole evaluation context, it's split into frames separated by resets.
 Type parameters and indices work the same as in frame.
 Unlike in frame, metaframe now stores resets, so lists of effects inside and outside  of frame
 may differ. That means their difference represents list of effects handled by the frame.
 This observation can be used to prove that for well typed expression (in empty typing context, and with condition that same labels have the same type) that decomposes into
 metaframe and `shift₀` expression, and metaframe should handle effect of the `shift`.
-Also this metaframe decomposes into two metaframes separated by `reset₀` which is has same label.
+Also this metaframe decomposes into two metaframes separated by `reset₀` which  has same label as mentioned  shift.
 ```
 data Metaframe (Θ : EContext) (Γ : Context) (T : Type) (Eff : Effects)
   : Type → Effects  → Set where
@@ -199,6 +202,7 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 # Reduction
 Since labels need to be allocated, reduction relation is defined in terms of expression and state. State itself is just next label to be allocated.
 As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
+\iffalse
 ```
 pb-v : ∀ {n} {A : Set} → Data.Vec.Vec A n → A → Data.Vec.Vec A (suc n)
 pb-v {n} xs x rewrite Data.Nat.Properties.+-comm 1 n = Data.Vec._++_ xs  (Data.Vec.[_] x)
@@ -248,7 +252,10 @@ postulate
 --pb-last = {!!}
   
 --new-subst : ∀ {e Θ A1 E1 T E} → { ( ∅ , Kind.E) ⨾ Θ ⨾ ( ∅ , L ttv zero at A1 E1) ⊢ e ⦂ T / E)
---  → Σ[ e' ∈ RExpr ] 
+--  → Σ[ e' ∈ RExpr ]
+```
+\fi
+```
 infix 2 _↦_
 State = EContext
 data _↦_ : RExpr × State → RExpr × State → Set where
