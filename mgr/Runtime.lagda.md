@@ -237,7 +237,7 @@ module Typing where
 
 ```
 \fi
-Most of typing judgement are working as before.
+Most of typing judgement are working as before. We omit ones that show up in surface language, as they just pass extra context throughout.
 ```
     private
       variable
@@ -250,6 +250,9 @@ Most of typing judgement are working as before.
          k : Kind
     infix  4  _⨾_⨾_⊢_⦂_/_
     data _⨾_⨾_⊢_⦂_/_ : TContext → EContext → Context → RExpr → Type → Effects → Set where
+```
+\iffalse
+```
 
         ⊢var : ∀ {x }
             → Γ ∋ x ⦂ A
@@ -304,6 +307,7 @@ Most of typing judgement are working as before.
             → Δ ⨾ Θ ⨾ Γ   ⊢ reset₀ e en e' ⦂ B / E'
 
 ```
+\fi
 Since labels are represented by natural numbers, ensuring type of label is just a lookup in apropriate context.
 ```
         ⊢label : ∀ {n }
