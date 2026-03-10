@@ -18,11 +18,10 @@
 \polishabstract{Tematem tej pracy jest stworzenie i zweryfikowanie języka z 
                 operatorami kontroli dla kontynuacji ograniczonych. Używa on polimorficznych typów aby pozwolić na wyrażenie
                 obliczeń generycznych wobec pewnych efektów. Celem pracy jest zweryfikowanie poprawnosci
-                definicji takiego języka oraz jego translacji do maszyny abstrakcyjnej.}
+                definicji takiego języka.}
 \englishabstract{We present a type system for a language with labeled delimited control operators.
                  It utilizes polymorphic types and effects to allow expressions parametrized by effects.
-                 Our goal is to formally prove correctness of such language and present translation
-                 of it to simple abstract machine.}
+                 Our goal is to formally prove correctness of such language.}
 %\advisorgen    { } % Nazwisko promotora w dopelniaczu
 %%%%%
 
@@ -59,12 +58,17 @@
 
 Control operators have been present in languages for a long time, one notable example is SCHEME programming language which started in 70s\cite{scheme}. They enable non-local jumps, that might be familiar to users of imperative languages with goto operator. But those operators unlinke goto, are handled by capturing continuation, and storing it as first-class value which can be passed, wrapped or dropped.
 
-One issue one might have with call/cc operator is that when called, it catches whole rest of program in the continuation.Operators for delimited control introduced by Danvy, Filinski\cite{abstracting} and Felleisen\cite{prompts} allow to control continuations them more precisely.
- Operator reset delimits continuations caught by shift. This allows for localized use of control effects, scope of captured continuation is much more visible. While they still allow for non-local execution, which enables intresting computational effects such as emulating non-determinism, exceptions, failure and others.
+One issue one might have with call/cc operator is that when called, it catches whole rest of program in the continuation. Operators for delimited control introduced by Danvy, Filinski\cite{abstracting} and Felleisen\cite{prompts} allow to control continuations them more precisely.
+ They usuall come in pairs, for example operator reset delimits continuations caught by shift. This allows for localized use of control effects, scope of captured continuation is much more visible. While they still allow for non-local execution, which enables intresting computational effects such as emulating non-determinism, exceptions, failure and others.
+Usually such calculi jump from shift to closest enclosing reset. Here we allow labeling them to allow jumps to different effects (multipromt continuations in Dybvig et al.\cite{monadic}).
 
-In this thesis we try to build typed version of such calculus with polymorphic types (similiar to Piróg, Polesiuk and Sieczkowski\cite{typed_equivalence}), but for multipromt delimited continuations. Usually such calculi jump from shift to closest enclosing reset. Here we tried labeling them to allow stacking of different effects.
+
+In this thesis we try to formalize typed version of such calculus with polymorphic types (similiar to Piróg, Polesiuk and Sieczkowski\cite{typed_equivalence}), but for labeled delimited continuations (like Kazuki Ikemori, Youyou Cong, and Hidehiko Masuhara\cite{typed_equivalence_label}). Main difference to Ikemori et al. is that labels are first class like in Xie et al.\cite{first_class_names} though for delimited continuations not for algebraic effects.
+Such lanuage in current form was present in unpublished notes\cite{unpublished} where simplified version of Fram programming language was presented. Presented language could be potentially used as one of compilation steps in Fram, or one of alternative backends.
+
 %This was planned originally to use approach similiar to described by Materzok, Biernacki\cite{subtyping} to compile language to abstract machine.
 
+Soundness of presented language is proved using standard techinque of progress and preservation\cite{syntactic}\cite{harper}.
 Formalisation work was done in Agda 2.8. Code archive has also nix derivation describing exact environment to build both package and this paper to ensure reproducibility.
 
 
