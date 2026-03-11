@@ -113,7 +113,7 @@ module TypeSubst where
 
 \fi
 # Typing judgements
-Typing contexts are represented as lists of types, and type contexts are represented as lists of kinds. Judgements for membership of types or kinds have Peano numbers structure.
+Typing contexts are represented as lists of types, and contexts for type variables are represented as lists of kinds. Type or kind judgements for membership have Peano numbers structure.
 ```
 module Typing where
     infixl 5  _,_
@@ -213,7 +213,7 @@ module Typing where
 \fi
 
 Expressions are extrinsically typed, thus typing judgements are represented separately.
-Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The noticeable difference is that expressions for values are generic over effects they execute.
+Typing rules for `var`, `lam`, `app`, `tlam`, and `tapp` are defined mostly as usual. The noticeable difference is that value expressions are generic over effects they execute.
 ```
     data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
         ⊢var : ∀ {Γ Δ x A E}
@@ -250,7 +250,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 ```
-The `new` construct introduces new type variable, and variable that represent respectively an   effect and a label. Type of label stores effect bound by `new` (here `ttv zero`). `A1` / `A2` represent a type and an effect of delimited computation.
+The `new` construct introduces a new type variable and a variable that represent respectively an   effect and a label.  The label type stores effect bound by `new` (here `ttv zero`) and `A1` / `E2` representing a type and an effect of delimited computation.
 ```
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
             → Δ ⊢ A1 ⦂t
@@ -259,7 +259,8 @@ The `new` construct introduces new type variable, and variable that represent re
             -----------------------
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
-Constructor `shift₀ e' (k . e)` uses only one effect `E` that's represented by label `e'`. For it to be a properly typed expression inside shift it binds extra variable `k` --- where continuation will be plugged into. So the type of this expression should take continuation and returns the same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of the same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `E`, so it shouldn't be represented in type of argument.
+Constructor `shift₀ e' (k . e)` uses only one effect `E` represented by label `e'`. For it to be a properly typed expression inside shift, the constructor binds extra variable `k`, which is where continuation will be plugged.
+Therefore the type of this expression `e` should the same type and effect as stored in label type. Its typing context should be expanded to account for contination, which type should be an arrow from `shift₀` type to type and effect of whole delimited computation.  Since during evaluation `reset₀` will be removed, effect `E` it has introduced will not be present in direct subexpressions of `shift₀`.
 
 ```
         ⊢shift₀ : ∀ {Γ Δ e e' A A' E E'}
@@ -270,7 +271,7 @@ Constructor `shift₀ e' (k . e)` uses only one effect `E` that's represented by
             → Δ , Γ ⊢ shift₀ e' e ⦂ A / (E ∷ nil)
 
 ```
-The `reset₀ e (v. en) e'` constructor has three parameters, first is expression `e` that will have access to effect, so its list of effects is expanded. Second is continuation `v . en` that will handle the value `v` returned from the first argument `e`. And third is the label `e'`, whose type stores the type and effects of the whole expression.
+The `reset₀ e (v. en) e'` constructor has three parameters. The first one is expression `e` that will have access to the effect, so its list of effects is expanded. The second one is continuation `v . en` that will handle the value `v` returned from the first argument `e`. And third is the label `e'`, whose effect is the same one as one introduced in `e`. Label type also stores the type and effects of the whole delimited computaiton.
 ```
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' E E'}
             → Δ ⊢ E ⦂e
@@ -282,7 +283,7 @@ The `reset₀ e (v. en) e'` constructor has three parameters, first is expressio
         
 ```
 
-Now that surface language is defined and typing rules for it, we must consider how it could be evaluated.
+Now that the surface language and its typing rules have been defined for it, the next chapter will consider how it could be evaluated.
 
 
 \iffalse
