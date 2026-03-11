@@ -96,7 +96,7 @@ module RuntimeExpr where
         shift₀ : RExpr → RExpr → RExpr
         reset₀ : RExpr → RExpr → RExpr → RExpr
 ```
-And here we have a separate term for the label it just stores the allocated label identifier. 
+And here we have a separate term for the label, it just stores the allocated label identifier. 
 ```
         label : Label → RExpr 
 ```
@@ -123,7 +123,7 @@ And here we have a separate term for the label it just stores the allocated labe
 
 ```
 \fi
-Since the grammar of types has changed, we need to redefine contexts. Unfortunately almost all of the typing judgements need to be redefined.
+Since the grammar of types has changed, we need to redefine contexts. That means almost all of the typing judgements need to be redefined.
 Here we also introduce a new context for effects that maps label values to type and effect of delimiter. Such technique of store typing is described by Pierce\cite{tapl} where to ensure type safety of allocations, typing rules take maps from locations to types. It's represented by a finite vector of types and effects. Since they are only used during evaluation, the types and effects have no free variables.
 ```
 module Typing where
@@ -321,6 +321,7 @@ Since labels are represented by natural numbers, ensuring type of label is just 
             → Δ ⨾ Θ ⨾ Γ ⊢ label n ⦂ (L (Effect n) at A / E) / F
 
 ```
+\pagebreak
 # Runtime embedding
 We defined embedding of the original language in the current one, and proof that such embedding preserves typing judgements.
 Most of the proof is omitted as it goes through almost all judgement types. We present only the type of main proof.

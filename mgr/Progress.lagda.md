@@ -19,9 +19,10 @@ import Data.Fin
 import Data.Nat.Properties
 ```
 \fi
+In this chapter we will define reduction relation and show that it is sound.
 # Values
-Here we define values. Only abstractions, type abstractions and labels are considered values.
-Since values themself don't perform any effects, they have `nil` effect. But rules for all of them have built-in weakening.
+First, we need to define define values. Only abstractions, type abstractions and labels are considered values.
+Since values themselves don't perform any effects, they have `nil` effect. But rules for all of them have built-in weakening.
 We can use that to generalize their type and perform substitution where any effect is expected.
 ```
 data Value : RExpr -> Set where
@@ -35,11 +36,10 @@ gvalue vlab (⊢label x) = ⊢label x
 gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 ```
 # Frames
-Frames would usually be named evaluation context, but here it's taken by typing context.
-Here frame represents parts between reset₀s, or reset₀ and shift₀.
+What is called frame here would usually be refered to as evaluation context, but here the name is already taken by typing context.
+Here frame represents parts between `reset₀`s, or `reset₀` and `shift₀`.
 Frame type is parametrized by Θ Γ - typing context outside of frame,  T type of the hole.
-It's also indexed by Effects and Type of whole frame, Effects of the hole, typing context of the hole
-and amount of new' constructors - which says how many type binders are in the frame.
+It's also indexed by Effects and Type of whole frame, Effects of the hole, typing context of the hole.
 Frames here are intrinsically typed, thus they also store type judgements of subexpressions. They are defined in such a way to reduce repetition, as otherwise we would need to introduce typing judgements for frames, and for every operation such as plugging or composition we would need to define it and then prove type preservation.
 
 ```
