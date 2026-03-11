@@ -168,13 +168,13 @@ module Typing where
             → Δ ⊢ t ⦂t
             → Δ ⊢ effs ⦂effs
             → Δ ⊢ L e at t / effs ⦂t 
-    data _⊢_⦂te : TContext → Type → Set where
+    data _⊢_⦂te_ : TContext → Type → Kind → Set where
       ⊢e : ∀{Δ t}
         → Δ ⊢ t ⦂e
-        → Δ ⊢ t ⦂te
+        → Δ ⊢ t ⦂te E
       ⊢t : ∀{Δ t}
         → Δ ⊢ t ⦂t
-        → Δ ⊢ t ⦂te
+        → Δ ⊢ t ⦂te T
     data _⊢_⦂effs where
         ⊢nil : ∀ {Δ}
             → Δ ⊢ nil ⦂effs
@@ -245,7 +245,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, and `tapp` are defined mostly as u
             → Δ , Γ ⊢ tlam k e ⦂ forallt k A E / F
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
-            → Δ ⊢ T ⦂te
+            → Δ ⊢ T ⦂te k
             → Δ , Γ ⊢ e ⦂ forallt k A E / E
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])

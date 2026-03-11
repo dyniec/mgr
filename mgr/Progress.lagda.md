@@ -6,6 +6,7 @@ open import Types using (Kind)
 open import Runtime
 open  Runtime.RuntimeExpr
 open RExprSubstTyped 
+open RExprSubst
 open Runtime.Types_
 open Runtime.Typing
 
@@ -233,7 +234,7 @@ postulate
 ↑Θ⊢t (⊢-> x x₁ x₂) = ⊢-> (↑Θ⊢t x) (↑Θ⊢effs x₁) (↑Θ⊢t x)
 ↑Θ⊢t (⊢forall x x₁) = ⊢forall (↑Θ⊢t x) (↑Θ⊢effs x₁)
 ↑Θ⊢t (⊢label x x₁ x₂) = ⊢label (↑Θ⊢e x) (↑Θ⊢t x₁) (↑Θ⊢effs x₂)
-↑Θ⊢te : ∀ {Δ Θ x T} → Δ ⨾ Θ ⊢ T ⦂te → Δ ⨾ pb Θ x ⊢ T ⦂te
+↑Θ⊢te : ∀ {Δ Θ x T k} → Δ ⨾ Θ ⊢ T ⦂te k → Δ ⨾ pb Θ x ⊢ T ⦂te k
 ↑Θ⊢te (⊢e x) = ⊢e (↑Θ⊢e x)
 ↑Θ⊢te (⊢t x) = ⊢t (↑Θ⊢t x)
 ↑Θ : ∀ { e Δ Θ Γ A E x} →  Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ A / E → Δ ⨾ pb Θ x ⨾ Γ ⊢ e ⦂ A / E
@@ -251,39 +252,63 @@ postulate
   pb-v-last : ∀ {n} {A : Set} → (xs : Data.Vec.Vec A n) → (x : A) → Data.Vec.lookup (pb-v xs x) (Data.Fin.fromℕ n) ≡ x
   pb-last : ∀ { Θ x }
     → (pb Θ x) ∋l (Θ .proj₁) ⦂ Data.Vec.lookup (pb Θ x .proj₂) (Data.Fin.fromℕ (Θ .proj₁)) .proj₁ / Data.Vec.lookup (pb Θ x .proj₂) (Data.Fin.fromℕ (Θ .proj₁)) .proj₂
+  e[t]-types : ∀ {Θ  T E k }
+    → Σ[ e ∈ RExpr ] (∅ , k) ⨾ Θ ⨾ ∅ ⊢ e ⦂ TypeSubst.bump T /  TypeSubst.bump' E
+    → Σ[ e' ∈ RExpr ] ∅ ⨾ Θ ⨾ ∅ ⊢ ( e' ) ⦂ T  / E
+  e[t]-types2 : ∀ {Θ Γ T E e k }
+    → (∅ , k) ⨾ Θ ⨾ Γ ⊢ e ⦂ T / E
+    → ∅ ⨾ Θ ⨾ Γ ⊢ e  ⦂ T  / E 
+  new-subst : ∀ {e Θ A1 E1  T E}
+    → ( ∅ , Kind.E) ⨾ Θ ⨾ ( ∅ , L ttv zero at A1 / E1) ⊢ e ⦂ TypeSubst.bump T / TypeSubst.bump' E
+    → ∅ ⨾ Θ ⨾ ∅ ⊢ new e ⦂ T / E 
+    → Σ[ e' ∈ RExpr ] (∅ ⨾ pb Θ (A1 ,′ E1) ⨾ ∅ ⊢ e' ⦂ T / E)
+  tapp-subst : ∀ { Θ e k T A E}
+    → (tt : ∅ ⨾ Θ  ⊢ T ⦂te k)
+    → (tv : ∅ ⨾ Θ ⨾ ∅ ⊢ (tlam k e) ⦂ forallt k A E / E)
+    → ∅ ⨾ Θ ⨾ ∅ ⊢ e RExprSubst.e[t T ]
+    ⦂ A TypeSubst.[ T ] / E TypeSubst.effs[t T ]
+  
+    --new-subst {e} {Θ} t tn = (RExprSubstTyped._[_]  (e e[t Effect (Θ .proj₁) ])  (label (Θ .proj₁)) {te = e[t]-types2 (↑Θ t)} {te1 = {!⊢label!}})
 --pb-v-last {zero} Data.Vec.[] x = refl
 --pb-v-last {suc n} (x₁ Data.Vec.∷ xs) x rewrite pb-v-last xs x  = refl
 --pb-last = {!!}
   
---new-subst : ∀ {e Θ A1 E1 T E} → { ( ∅ , Kind.E) ⨾ Θ ⨾ ( ∅ , L ttv zero at A1 E1) ⊢ e ⦂ T / E)
---  → Σ[ e' ∈ RExpr ]
 ```
 \fi
 ```
-infix 2 _↦_
+-- infix 2 _↦_
 State = EContext
-data _↦_ : RExpr × State → RExpr × State → Set where
- {-
- ↦new : ∀ {e Δ Θ E T A1 E1}
-  → {te : (Δ , Kind.E) ⨾ Θ ⨾(∅ , L ttv zero at A1 / E1)  ⊢ e ⦂ E / T}
-  → new e ,′ Θ  ↦  RExprSubstTyped._[_] e (label (Θ .proj₁)) {te = te} {te1 = {!!}} .proj₁  ,′ Θ --(Data.Vec._++_ Θ (  Data.Vec._⧺_ (A1 ,′ E1) Data.Vec.[]))
- -}
- β-lam-app : ∀ {e V Θ Γ A B E }
-  → {te : ∅ ⨾ Θ ⨾ (Γ , A) ⊢ e ⦂ B / E}
-  → {tv : ∅ ⨾ Θ ⨾ Γ ⊢ V ⦂ A / E}
+private
+    variable
+        A B : Type
+        E E' : Effects
+        Θ  : EContext
+data _⨾_↦_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → (Θ' : EContext) →(e' : RExpr) → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
+ ↦new : ∀ {e Θ  E T A1 E1}
+  → {te : (∅ , Kind.E) ⨾ Θ ⨾(∅ , L ttv zero at A1 / E1)  ⊢ e ⦂ TypeSubst.bump T / TypeSubst.bump' E}
+  → {tn : ∅ ⨾ Θ ⨾ ∅  ⊢ new e ⦂ T / E}
+  → new e ⨾ tn  ↦   pb Θ (A1 ,′ E1) ⨾ (new-subst te tn) .proj₁  ⨾ new-subst te tn .proj₂
+  
+ β-lam-app : ∀ {e V Θ A B E }
+  → {te : ∅ ⨾ Θ ⨾ (∅ , A) ⊢ e ⦂ B / E}
+  → {tv : ∅ ⨾ Θ ⨾ ∅ ⊢ V ⦂ A / E}
   → Value (lam e)
   → (v : Value V)
-  → app (lam e) V ,′ Θ ↦ (proj₁ (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})) ,′ Θ
+  → app (lam e) V ⨾ ⊢app (⊢lam te) tv ↦ Θ ⨾  (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)}) .proj₁ ⨾ (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})  .proj₂ 
 
- β-tlam-tapp : ∀ {k e T Θ}
+ β-tlam-tapp : ∀ {k e T  }
    → Value (tlam k e)
-   → tapp (tlam k e) T ,′ Θ ↦ e RExprSubst.e[t T ]  ,′ Θ
+    → (tt : ∅ ⨾ Θ  ⊢ T ⦂te k)
+    → (tv : ∅ ⨾ Θ ⨾ ∅ ⊢ (tlam k e) ⦂ forallt k A E / E)
+   → tapp (tlam k e) T ⨾ ⊢tapp tt tv ↦ Θ ⨾ e RExprSubst.e[t T ]  ⨾ tapp-subst tt tv
 
- reset₀-vl : ∀ {V e' en  Θ Γ A B E }
+ reset₀-vl : ∀ {V e' en  Θ  A B E T }
   → ( v : Value V)
-  → {tv : ∅ ⨾ Θ ⨾ Γ ⊢ V ⦂ A / E}
-  → {ten : ∅ ⨾ Θ ⨾ (Γ , A) ⊢ en ⦂ B / E}
-  → reset₀ V en e' ,′ Θ ↦ (RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁) ,′ Θ
+  → {tt : ∅ ⨾ Θ  ⊢ T ⦂e }
+  → {tv : ∅ ⨾ Θ ⨾ ∅ ⊢ V ⦂ A / T ∷ E}
+  → {ten : ∅ ⨾ Θ ⨾ (∅ , A) ⊢ en ⦂ B / E}
+  → {tl : ∅ ⨾ Θ ⨾ ∅  ⊢ e' ⦂ (L T at  B / E) / nil }
+  → reset₀ V en e' ⨾ (⊢reset₀ tt tl tv ten) ↦ Θ ⨾ RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁ ⨾ RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₂
 
 {-
  reset₀-k : ∀ {es en e' e s n Θ A T Eff Eff' B A' E' ls lr}

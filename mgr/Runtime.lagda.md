@@ -147,6 +147,11 @@ module Typing where
 ```
 \iffalse
 ```
+
+    substT-in-context : Context → Type → Context
+    substT-in-context ∅ T = ∅
+    substT-in-context (Γ , x) T = (substT-in-context Γ T) , (x TypeSubst.[ T ])
+
     infix 4 _∋_⦂_
     data _∋_⦂_ : Context → Id → Type → Set where
         Z : ∀ {Γ  A}
@@ -199,13 +204,13 @@ module Typing where
             → Δ ⨾ Θ ⊢ t ⦂t
             → Δ ⨾ Θ ⊢ effs ⦂effs
             → Δ ⨾ Θ ⊢ L e at t / effs ⦂t
-    data _⨾_⊢_⦂te : TContext → EContext → Type → Set where
+    data _⨾_⊢_⦂te_ : TContext → EContext → Type → Kind → Set where
       ⊢e : ∀{Δ Θ t}
         → Δ ⨾ Θ ⊢ t ⦂e
-        → Δ ⨾ Θ ⊢ t ⦂te
+        → Δ ⨾ Θ ⊢ t ⦂te Kind.E
       ⊢t : ∀{Δ Θ t}
         → Δ ⨾ Θ ⊢ t ⦂t
-        → Δ ⨾ Θ ⊢ t ⦂te
+        → Δ ⨾ Θ ⊢ t ⦂te Kind.T
     data _⨾_⊢_⦂effs where
         ⊢nil : ∀ {Δ Θ}
             → Δ ⨾ Θ ⊢ nil ⦂effs
@@ -287,7 +292,7 @@ Most typing judgements work as before. This paper does not discuss the ones that
             → Δ ⨾ Θ ⨾ Γ ⊢ tlam k e ⦂ forallt k A E / F
 
         ⊢tapp : 
-            Δ ⨾ Θ  ⊢ B ⦂te
+            Δ ⨾ Θ  ⊢ B ⦂te k
             → Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ forallt k A E / E
             ---------------------------------------------------------------
             → Δ ⨾ Θ ⨾ Γ ⊢ tapp e B ⦂ A TypeSubst.[ B ] / (E TypeSubst.effs[t B ])
@@ -386,8 +391,8 @@ module Transform where
           (runtime⊢t x₁) (runtime⊢effs x₂)
         runtime⊢effs ⊢nil = ⊢nil
         runtime⊢effs (⊢cons x x₁) = ⊢cons (runtime⊢e x) (runtime⊢effs x₁)
-        runtime⊢te : ∀ {Δ T}
-          → Δ Types.Typing.⊢ T ⦂te → (runtimeΔ Δ) ⨾ ∅' ⊢ rt-t T ⦂te
+        runtime⊢te : ∀ {Δ T k}
+          → Δ Types.Typing.⊢ T ⦂te k → (runtimeΔ Δ) ⨾ ∅' ⊢ rt-t T ⦂te k
         runtime⊢te (⊢e x) = ⊢e (runtime⊢e x)
         runtime⊢te (⊢t x) = ⊢t (runtime⊢t x)
         runtime<⦂ : ∀ {Δ E1 E2}
@@ -541,5 +546,6 @@ module RExprSubstTyped where
     subst σ (⊢reset₀ x x₁ x₂ x₃) = reset₀ (subst σ x₂ .proj₁) ( subst (exts σ) x₃ .proj₁) (subst σ x₁ .proj₁)
         ,, ⊢reset₀ x (subst σ x₁ .proj₂) (subst σ x₂ .proj₂) (subst (exts σ) x₃ .proj₂)
     subst σ (⊢label {n = n} x) = label n ,, ⊢label x
+    
 ```
 \fi
