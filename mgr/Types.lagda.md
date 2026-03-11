@@ -15,9 +15,9 @@ data Kind : Set where
     T : Kind
     E : Kind 
 ```
-Types  and effects are defined mutually recursive. A type is either a variable, an arrow, a forall or a label.
+Types  and effects are defined as mutually recursive. A type is either a type variable `ttv`, an arrow, a `forallt` or a label `L eff at A / E`.
 We represent variables and type variables with de Bruijn indices.
-Effects is list of types, it's used in arrow and forall constructors of type to keep effects of computation underneath and it will together with type be used in typing judgement. Label constructor just stores type variable bound to the effect represented by the label and then type and effect of delimited computation.
+Effects datatype stores list of effects (represented as types) , it's used in arrow and forall constructors of type to mark effects of computation underneath. It will be also used in typing judgements to mark effects available in computation. Constructor `L` represents type of label expressions. It just stores an effect `eff` represented by a label and then type and effect of delimited computation labelled by this label.
 ```
 module Types where
     Id : Set
@@ -32,10 +32,12 @@ module Types where
     Effects = List Type
 open Types
 ```
-Constructors of expressions such as `var`, `lam`, `app`, `tlam`, `tapp` behave as usual.
-`var` is de Bruijn indexed variable, `lam` is lambda abstraction, `app` is function application, `tlam` is type abstraction, but it stores kind of abstracted type and `tapp` is type application.
-The rest of the constructors are responsible for continuations and labels. Constructor `new` bind label that is used by `shift₀` and `reset₀` constructors to pair up. `shift₀` stores label and expression (parametrized by continuation) that replaces whole delimited computation. Last constructor of expressions is `reset₀` which has 3 fields, last one is label that is used to match up reset with shifts. First argument is delimited computation where `shift₀` can be used. So when `shift₀ k.e` is being evaluated it aborts enclosing corresponding reset, instead of it now `e` is being evaluated with `k` bound to continuation representing evaluation context between shift and its reset.
-Second field `x. en` is used when during evaluation of first expression no corresponding shift aborts, and just yields value `v` - then whole `reset₀` evaluates to `en` where `x` is bound to `v`.
+Constructors of expressions such as `var`, `lam`, `app`, `tlam`, and `tapp` behave as usual.
+`var` is a de Bruijn indexed variable, `lam` is a lambda abstraction, `app` is a function application, `tlam` is a type abstraction, storing kind of abstracted type and `tapp` is type application.
+Other constructors are responsible for continuations and labels. Constructor `new` binds labels used by `shift₀` and `reset₀` expressions to pair them up.
+Constructor `shift₀` stores the label and expression (parametrized by continuation) that replaces whole delimited computation.
+Last constructor of expressions is `reset₀ e (v . en) e'` which has 3 arguments, last one `e'` is label that is used to match up `reset₀`s with `shift₀`s. First argument `e` is delimited computation where `shift₀` can be used. So when `shift₀ k.es` is being evaluated, it aborts enclosing up to corresponding  `reset₀`, replacing it with  `es` is being evaluated with `k` bound to continuation representing evaluation context between `shift₀` and its `reset₀`.
+Second argument `x. en` is used when  no corresponding shift aborts during evaluation of `e`. If `e` evaluates to `v` - then whole `reset₀` reduces to `en` where `x` is bound to `v`.
 
 
 ```
