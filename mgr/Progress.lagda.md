@@ -43,7 +43,7 @@ The frame represents parts between `reset₀`s, or between `reset₀` and `shift
 Frame type is parametrized by Θ Γ, that is, the typing context outside of frame, a T type of the hole.
 It's also indexed by whole frame type and effects, and  the effects of the hole, .
 Frames  are intrinsically typed, thus they also store type judgements of subexpressions.
-They are defined in such a way to reduce repetition.  Otherwise we would need to introduce typing judgements for frames, and then prove type preservation for every operation such as plugging or composition.
+They are defined in such a way to reduce repetition. Otherwise we would need to introduce typing judgements for frames, and then prove type preservation for every operation such as plugging or composition.
 
 ```
 data Frame (Θ : EContext) (Γ : Context) (T : Type) : Effects → Type → Effects →  Set where

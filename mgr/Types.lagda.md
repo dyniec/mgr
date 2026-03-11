@@ -250,7 +250,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, and `tapp` are defined mostly as u
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 ```
-The `new` construct introduces a new type variable and a variable that represent respectively an   effect and a label.  The label type stores effect bound by `new` (here `ttv zero`) and `A1` / `E2` representing a type and an effect of delimited computation.
+The `new` construct introduces a new type variable and a variable that represent respectively an   effect and a label. The label type stores effect bound by `new` (here `ttv zero`) and `A1` / `E2` representing a type and an effect of delimited computation.
 ```
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
             → Δ ⊢ A1 ⦂t
@@ -260,7 +260,7 @@ The `new` construct introduces a new type variable and a variable that represent
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
 Constructor `shift₀ e' (k . e)` uses only one effect `E` represented by label `e'`. For it to be a properly typed expression inside shift, the constructor binds extra variable `k`, which is where continuation will be plugged.
-Therefore the type of this expression `e` should the same type and effect as stored in label type. Its typing context should be expanded to account for contination, which type should be an arrow from `shift₀` type to type and effect of whole delimited computation.  Since during evaluation `reset₀` will be removed, effect `E` it has introduced will not be present in direct subexpressions of `shift₀`.
+Therefore the type of this expression `e` should the same type and effect as stored in label type. Its typing context should be expanded to account for contination, which type should be an arrow from `shift₀` type to type and effect of whole delimited computation. Since during evaluation `reset₀` will be removed, effect `E` it has introduced will not be present in direct subexpressions of `shift₀`.
 
 ```
         ⊢shift₀ : ∀ {Γ Δ e e' A A' E E'}
