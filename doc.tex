@@ -16,13 +16,13 @@
 % Dane do oswiadczenia o autorskim wykonaniu
 \transcriptnum {271900}                     % Numer indeksu
 \polishabstract{Tematem tej pracy jest stworzenie i zweryfikowanie języka z 
-                operatorami sterowania dla kontynuacji ograniczonych. Używa on polimorficznych typów aby pozwolić na wyrażenie
-                obliczeń generycznych wobec pewnych efektów. Celem pracy jest zweryfikowanie poprawnosci
+                operatorami sterowania dla kontynuacji ograniczonych. Język ten używa polimorficznych typów aby pozwolić na wyrażenie
+                obliczeń generycznych wobec pewnych efektów. Celem pracy jest zweryfikowanie poprawności
                 definicji takiego języka. Formalizacja została przeprowadzona w języku programowania Agda.
                 }
 \englishabstract{We present a type system for a language with labeled delimited control operators.
                  It utilizes polymorphic types and effects to allow expressions parametrized by effects.
-                 Our goal is to formally prove correctness of such language.
+                 Our goal is to formally prove the correctness of such a language.
                  Formalisation work was done in Agda programming language.
                  }
 %\advisorgen    { } % Nazwisko promotora w dopelniaczu
@@ -59,24 +59,27 @@
 
 \chapter{Introduction}
 
-Control operators have been present in languages for a long time. One notable example is SCHEME operator programming language which started in 70s\cite{scheme} and provides $call/cc$ operator. They enable non-local jumps, that might be familiar to users of imperative languages with goto operator. But those operators, unlike goto, are handled by capturing continuation, and storing it as first-class value which can be passed, stored or dropped. One issue one might have with $call/cc$ operator is that when called, it catches whole rest of program in the continuation. For example in \texttt{(call/cc (\lambda k -> k (k 1)))} only inner $k$ would be called.
+Control operators have been present in languages for a long time. One notable example is the SCHEME programming language which originated in the 70s\cite{scheme} and provides a $call/cc$ operator. Such operators enable non-local jumps, which might be familiar to users of imperative languages with goto operator. But those operators unlike goto are handled by capturing continuation, which is stored as first-class value, able to be passed, called or dropped.
+Operator $call/cc$  when called, catches whole rest of program in the continuation. When this continuation is called, it aborts rest of the program and replaces it with this continuation. Thus in example program \texttt{(call/cc (k . k (k 1)))} only inner $k$ would be called.
 
 Operators for delimited control introduced by Danvy, and Filinski\cite{abstracting} and independently by Felleisen\cite{prompts} allow to control continuations more precisely.
- They usually come in pairs, for example operator $reset$ delimits continuations caught by $shift$. This allows for localized use of control effects, scope of captured continuation is much more visible. While they still allow for non-local execution, which enables interesting computational effects such as emulating non-determinism, exceptions, failure and others.
-Usually such calculi jump from shift to closest enclosing reset. Reduction rule looks like this \texttt{(reset E[(shift k expr)]) => (reset ((\lambda k -> expr) (\lambda v -> (reset E[v]))))}, so for example \texttt{(reset (+ 1 (shift k (k (k 0)))))} would call $k$ twice and would result in value $2$.
+ They usually come in pairs: for example, the operator $reset$ delimits continuations caught by $shift$. This allows localized use of control effects, as the scope of the captured continuation  much more visible, while  still allowing non-local execution, which enables interesting computational effects such as emulating non-determinism, exceptions and failure.
+Usually such calculi jump from $shift$ to the closest enclosing $reset$. Reduction rule looks like this
+\\ \texttt{(reset E[(shift k expr)]) => (reset (( k . expr) ( v . (reset E[v]))))} therefore, for example \texttt{(reset (+ 1 (shift k (k (k 0)))))} would call $k$ twice and result in value $2$.
 
-In their article on delimited continuations Danvy and Filinski\cite{functional_abstraction} also describe similar operators $shift\_0$ and $reset\_0$. Their reduction doesn't introduce outermost $reset\_0$, so subsequent calls to $shift\_0$ remove innermost $reset\_0$ one by one. They used example \texttt{reset\_0(3 + reset\_0(4 * shift\_0 k in shift\_0 c in E))} to showcase this behaviour. Continuation $k$ would be bound to \texttt{\lambda x -> 4*x} and $c$ to \texttt{\lambda x -> 3 + x}.
-Dybvig et al.\cite{monadic} have shown formalisation of delimited control with multiple prompts --- where labels are used to match corresponding operators.
+Danvy and Filinski\cite{functional_abstraction} also describe similar operators $shift_0$ and $reset_0$. Their reduction does not introduce outermost $reset\_0$, therefore subsequent calls to $shift_0$ remove innermost $reset_0$ one by one. Their example showcases this behaviour \texttt{reset\_0(3 + reset\_0(4 * shift\_0 k in shift\_0 c in E))}. The continuation $k$ would be bound to \texttt{x . 4 \cdot x} and $c$ to \texttt{ x. 3 + x}.
+In addition Dybvig et al.\cite{monadic} show the formalisation of delimited control with multiple prompts where labels are used to match the corresponding operators.
 
 
-In this thesis we try to formalise typed version of such calculus with polymorphic types (similar to Piróg, Polesiuk and Sieczkowski\cite{typed_equivalence}), but for labeled delimited continuations (like Kazuki Ikemori, Youyou Cong, and Hidehiko Masuhara\cite{typed_equivalence_label}).
+The aim of this thesis is to formalise a typed version of such a calculus with polymorphic types (similar to Piróg, Polesiuk and Sieczkowski\cite{typed_equivalence}), but for labeled delimited continuations (like Kazuki Ikemori, Youyou Cong, and Hidehiko Masuhara\cite{typed_equivalence_label}).
 \\
-The main difference to Ikemori et al. is that labels are first class like in Xie et al.\cite{first_class_names}, though for delimited continuations not for algebraic effects.
-Such language was present in unpublished notes of Balik, and Polesiuk\cite{unpublished} and currently serves as core of Fram programming language. Formalising such calculus could serve as step in proving soundness of Fram's implementation.
+Compared to Ikemori et al., the main difference in our work is the use of first-class labels for delimited continuations, similarly to how Xie et al.\cite{first_class_names} used them for algebraic effects.
+Balik and Polesiuk  presented such a language\cite{unpublished} which currently serves as the core of Fram programming language.
+Formalising such a calculus could serve as a step in to demonstrate soundness of Fram's implementation.
 
 
-Soundness of the presented language is proved using standard technique of progress and preservation\cite{syntactic}\cite{harper}.
-Formalisation work was done in Agda 2.8. Code archive has also nix derivation describing exact environment to build both package and this paper to ensure reproducibility.
+The soundness of the presented language is proved using the standard technique of progress and preservation\cite{syntactic}\cite{harper}.
+Formalisation work was done in Agda 2.8. The code archive also features nix derivation describing the exact environment to build both package and this paper to ensure reproducibility.
 
 
 \chapter{Surface language}
