@@ -21,9 +21,8 @@ import Data.Nat.Properties
 \fi
 # Values
 Here we define values. Only abstractions, type abstractions and labels are considered values.
-Since values themself don't perform any effects, they have `nil` effect. But rules for all of
-them have built-in weakinging. We can use that to generalize their type and perform substiution
-where any effect is expected.
+Since values themself don't perform any effects, they have `nil` effect. But rules for all of them have built-in weakening.
+We can use that to generalize their type and perform substitution where any effect is expected.
 ```
 data Value : RExpr -> Set where
     vlam : ∀ { e } → Value (lam e)
@@ -35,13 +34,13 @@ gvalue vLam (⊢forall t) = ⊢forall t
 gvalue vlab (⊢label x) = ⊢label x
 gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 ```
-#Frames
-Frames would usally be named evaluation context, but here it's taken by typing context.
+# Frames
+Frames would usually be named evaluation context, but here it's taken by typing context.
 Here frame represents parts between reset₀s, or reset₀ and shift₀.
 Frame type is parametrized by Θ Γ - typing context outside of frame,  T type of the hole.
 It's also indexed by Effects and Type of whole frame, Effects of the hole, typing context of the hole
 and amount of new' constructors - which says how many type binders are in the frame.
-Frames here are intrinsically typed, thus they also store type judgements of subexpressions. They are defined in such way to reduce repetition, as otherwise we would need to introduce typing judgements for frames, and for every operation such as plugging or composition we would need to define it and then prove type preservation.
+Frames here are intrinsically typed, thus they also store type judgements of subexpressions. They are defined in such a way to reduce repetition, as otherwise we would need to introduce typing judgements for frames, and for every operation such as plugging or composition we would need to define it and then prove type preservation.
 
 ```
 data Frame (Θ : EContext) (Γ : Context) (T : Type) : Effects → Type → Effects →  Set where
@@ -73,7 +72,7 @@ data Frame (Θ : EContext) (Γ : Context) (T : Type) : Effects → Type → Effe
     → Frame Θ Γ T (C ∷ nil) A E 
 
 ```
-Frame plugging and composition:
+Definition and types for frame plugging and composition:
 ```
 plug : ∀ {Θ Γ  T Eff A  E}
   → Frame Θ Γ T Eff A E 
@@ -112,13 +111,17 @@ as plugging expression into composition of two frames.
   → (e : RExpr) → (t : ∅ ⨾ Θ ⨾ Γ ⊢ e ⦂ C / Eff'')
   → plug ( f1 ∘f f2)  e t
   ≡ ((λ x → plug f1 (Data.Product.proj₁ x) (Data.Product.proj₂ x))(plug f2 e t))
-         
+```
+\iffalse
+```
 ∘f-lemma fempty f2 e t = refl
 ∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (freset-label ee en x x₁ x₂ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ∘f-lemma (fshift-label e₁ x x₁ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ```
+
+\fi
 Lifting frames into arbitrary context preserves types, same as with expressions.
 ```
 ↑f : forall { Θ A B Eff Eff'  Γ' Γ}
@@ -134,13 +137,13 @@ Lifting frames into arbitrary context preserves types, same as with expressions.
 ↑f (fshift-label e x x₁ f) = fshift-label e x (e↑ x₁) (↑f f)
 ```
 \fi
-Metaframe stores whole evaluation context, it's split into frames separated by resets.
+Metaframe stores the whole evaluation context, it's split into frames separated by resets.
 Type parameters and indices work the same as in frame.
 Unlike in frame, metaframe now stores resets, so lists of effects inside and outside  of frame
-may differ. That means their difference represents list of effects handled by the frame.
+may differ. That means their difference represents a list of effects handled by the frame.
 This observation can be used to prove that for well typed expression (in empty typing context, and with condition that same labels have the same type) that decomposes into
-metaframe and `shift₀` expression, and metaframe should handle effect of the `shift`.
-Also this metaframe decomposes into two metaframes separated by `reset₀` which  has same label as mentioned  shift.
+metaframe and `shift₀` expression, and metaframe should handle effect of the `shift₀`.
+Also this metaframe decomposes into two metaframes separated by `reset₀` which  has same label as mentioned  `shift₀`.
 ```
 data Metaframe (Θ : EContext) (Γ : Context) (T : Type) (Eff : Effects)
   : Type → Effects  → Set where
@@ -200,7 +203,7 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 \fi
 
 # Reduction
-Since labels need to be allocated, reduction relation is defined in terms of expression and state. State itself is just next label to be allocated.
+Since labels need to be allocated, the reduction relation is defined in terms of expression and state. State itself is just the next label to be allocated.
 As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
 \iffalse
 ```
@@ -352,15 +355,15 @@ data Progress : State → RExpr → Set where
 Proof of progress would have a type of
 `progress : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Progress s e`.
 In such proof We would use auxiliary struct `Decompose` which builder would  walk down well typed expression recursively
-until it has reached either value, simple reduction (app, tapp, new), or shift, and return it with surrounding metaframe.
+  until it has reached either value, simple reduction (app, tapp, new), or shift, and return it with the surrounding metaframe.
 
-In case of shift, such metaframe by construction should have effect handler that has same effect as shift. So
-we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in
+In case of shift, such a metaframe by construction should have an effect handler that has the same effect as shift.
+So we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in
 context.
 
 ## Preservation
 Current definition of reduction relation would yield proof of preservation immediately if progress was given since, frames and expressions are well typed,
-and reduction relation requires proofs to plug into metaframes or subsitution.
+and reduction relation requires proofs to plug into metaframes or substitution.
 
 \iffalse
 ```

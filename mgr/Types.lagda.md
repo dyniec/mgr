@@ -15,9 +15,9 @@ data Kind : Set where
     T : Kind
     E : Kind 
 ```
-Types  and Effects are defined mutally recursive.Type is either variable, arrow, forall or label.
+Types  and Effects are defined mutually recursive. Type is either variable, arrow, forall or label.
 We represent variables and type variables with de Bruijn indices.
-Effect is list of types, it's used in arrow and forall constructors of type to keep effects of computation underneath and it will be used in typing judgement. Label contructor just stores type variable bound to effect represented by the label and then Type and Effect of delimited computation.
+Effect is list of types, it's used in arrow and forall constructors of type to keep effects of computation underneath and it will together with type be used in typing judgement. Label constructor just stores type variable bound to the effect represented by the label and then type and effect of delimited computation.
 ```
 module Types where
     Id : Set
@@ -33,8 +33,8 @@ module Types where
 open Types
 ```
 Constructors of expressions such as `var`, `lam`, `app`, `tlam`, `tapp` behave as usual.
-`var` is de Bruijn indexed variable, `lam` is lambda abstraction, `app` is function application, `tlam` is type abstraction, but it stores Kind of abstracted type and `tapp` is type application.
-The rest of constructors are responsible for continuations and labels. Constructor `new` bind label that is used by shift₀ and reset₀ constructors to pair up. `shift₀` stores label and expression (parametrized by continuation) that replaces whole delimited computation. Last constructor of expressions is `reset₀` which has 3 fields, last one is label that is used to match up reset with shifts. First argument is delimited computation where `shift₀` can be used. So when `shift₀ k.e` is being evaluated it aborts enclosing corresponding reset, instead of it now `e` is being evaluated with `k` bound to continuation representing evaluation context between shift and it's reset.
+`var` is de Bruijn indexed variable, `lam` is lambda abstraction, `app` is function application, `tlam` is type abstraction, but it stores kind of abstracted type and `tapp` is type application.
+The rest of the constructors are responsible for continuations and labels. Constructor `new` bind label that is used by shift₀ and reset₀ constructors to pair up. `shift₀` stores label and expression (parametrized by continuation) that replaces whole delimited computation. Last constructor of expressions is `reset₀` which has 3 fields, last one is label that is used to match up reset with shifts. First argument is delimited computation where `shift₀` can be used. So when `shift₀ k.e` is being evaluated it aborts enclosing corresponding reset, instead of it now `e` is being evaluated with `k` bound to continuation representing evaluation context between shift and it's reset.
 Second field `x. en` is used when during evaluation of first expression no corresponding shift aborts, and just yields value `v` - then whole reset₀ evaluates to `en` where `x` is bound to `v`.
 
 
@@ -111,7 +111,7 @@ module TypeSubst where
 
 \fi
 # Typing judgements
-Typing Contexts are represented as list of types, and type contexts are represented as lists of kinds. Judgements for membership of types have Peano numbers structure.
+Typing contexts are represented as lists of types, and type contexts are represented as lists of kinds. Judgements for membership of types or kinds have Peano numbers structure.
 ```
 module Typing where
     infixl 5  _,_
@@ -211,7 +211,7 @@ module Typing where
 \fi
 
 Expressions are extrinsically typed, thus typing judgements are represented separately.
-Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The noticable difference is that expressions for values are generic over effect they execute.
+Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The noticeable difference is that expressions for values are generic over effects they execute.
 ```
     data _,_⊢_⦂_/_ : TContext → Context → Expr → Type → Effects → Set where
         ⊢var : ∀ {Γ Δ x A E}
@@ -257,7 +257,7 @@ The `new` construct introduces new type variable, and variable that represent re
             -----------------------
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
-Constructor `shift₀` uses only one effect `E` that's represented by label. For it to be properly typed expression inside shift bind extra variable --- where continuation will be plugged into. So type of this expression should take continuation and returns same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
+Constructor `shift₀` uses only one effect `E` that's represented by label. For it to be a properly typed expression inside shift bind extra variable --- where continuation will be plugged into. So the type of this expression should take continuation and returns the same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of the same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `E`, so it shouldn't be represented in type of argument.
 
 ```
         ⊢shift₀ : ∀ {Γ Δ e e' A A' E E'}
@@ -268,7 +268,7 @@ Constructor `shift₀` uses only one effect `E` that's represented by label. For
             → Δ , Γ ⊢ shift₀ e' e ⦂ A / (E ∷ nil)
 
 ```
-The `reset₀` constructor has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle value returned from first argument. And third is label, which type stores type and effects of whole expression.
+The `reset₀` constructor has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle the value returned from the first argument. And third is the label, whose type stores the type and effects of the whole expression.
 ```
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' E E'}
             → Δ ⊢ E ⦂e

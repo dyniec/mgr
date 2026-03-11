@@ -1,9 +1,9 @@
 # Runtime language
-Grammar of terms we defined previously doesn't have any expression that would have type of label, and shift and reset require same labels. That means that to define reduction relation we would need to either go under `new` binders or introduce label expressions. We decided to define another runtime expression language expanded by notion of label values.
+Grammar of terms we defined previously doesn't have any expression that would have type of label, and shift and reset require the same labels. That means that to define reduction relation we would need to either go under `new` binders or introduce label expressions. We decided to define another runtime expression language expanded by the notion of label values.
 
-When `new` expression is evaluated then all occurences of variables bound by it would have it replaced with newly allocated label value. That means evaluation would need to keep a state for allocator.
+When `new` expression is evaluated then all occurrences of variables bound by it would have it replaced with newly allocated label value. That means evaluation would need to keep a state for the allocator.
 
-To ensure type safety we will expand syntax of types with allocated effects, and add new effect context to typing judgmenents, that maps allocations to type and effect of delimiter.
+To ensure type safety we will expand syntax of types with allocated effects, and add new effect context to typing judgments, that maps allocations to type and effect of delimiter.
 
 \iffalse
 ```
@@ -82,7 +82,7 @@ module TypeSubst where
 ```
 
 \fi
-Most of constructors in `RExpr` are the same as in `Expr`. Labels runtime values are represented by Natural numbers.
+Most of the constructors in `RExpr` are the same as in `Expr`. Labels runtime values are represented by natural numbers.
 
 ```
 module RuntimeExpr where
@@ -96,7 +96,7 @@ module RuntimeExpr where
         shift₀ : RExpr → RExpr → RExpr
         reset₀ : RExpr → RExpr → RExpr → RExpr
 ```
-And here we have separate term for labels, it just stores allocated label identifier. 
+And here we have a separate term for the label it just stores the allocated label identifier. 
 ```
         label : Label → RExpr 
 ```
@@ -123,8 +123,8 @@ And here we have separate term for labels, it just stores allocated label identi
 
 ```
 \fi
-Since grammar of types has changed, we need to redefine contexts. Unfortunately almost all of typing judgements need to be redefined.
-Here we also introduce new context for effects that maps label values to type and effect of delimiter. Such techinque of `store typing` is described by Pierce\cite{tapl} where to ensure type safety of allocations, typing rules take maps from locations to types. It's represented by  finite vector of types and effects. Since they are only used during evaluation, the types and effects have no free variables.
+Since the grammar of types has changed, we need to redefine contexts. Unfortunately almost all of the typing judgements need to be redefined.
+Here we also introduce a new context for effects that maps label values to type and effect of delimiter. Such technique of store typing is described by Pierce\cite{tapl} where to ensure type safety of allocations, typing rules take maps from locations to types. It's represented by a finite vector of types and effects. Since they are only used during evaluation, the types and effects have no free variables.
 ```
 module Typing where
     open RuntimeExpr
@@ -240,7 +240,7 @@ module Typing where
 
 ```
 \fi
-Most of typing judgement are working as before. We omit ones that show up in surface language, as they just pass extra context throughout.
+Most of the typing judgements are working as before. We omit ones that show up in surface language, as they just pass extra context for effects throughout.
 ```
     private
       variable
@@ -313,7 +313,7 @@ Most of typing judgement are working as before. We omit ones that show up in sur
 
 ```
 \fi
-Since labels are represented by natural numbers, ensuring type of label is just a lookup in apropriate context.
+Since labels are represented by natural numbers, ensuring type of label is just a lookup in appropriate context.
 ```
         ⊢label : ∀ {n }
             → Θ ∋l n ⦂ A / E
@@ -322,8 +322,8 @@ Since labels are represented by natural numbers, ensuring type of label is just 
 
 ```
 # Runtime embedding
-We defined embedding of original language in current one, and proof that such embedding preserves typing judgements.
-Most of proof is ommited as it goes through almost all judgement types. We present only type of main proof.
+We defined embedding of the original language in the current one, and proof that such embedding preserves typing judgements.
+Most of the proof is omitted as it goes through almost all judgement types. We present only the type of main proof.
 
 \iffalse
 ```
