@@ -35,13 +35,13 @@ gvalue vLam (⊢forall t) = ⊢forall t
 gvalue vlab (⊢label x) = ⊢label x
 gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 ```
-
+#Frames
 Frames would usally be named evaluation context, but here it's taken by typing context.
 Here frame represents parts between reset₀s, or reset₀ and shift₀.
 Frame type is parametrized by Θ Γ - typing context outside of frame,  T type of the hole.
 It's also indexed by Effects and Type of whole frame, Effects of the hole, typing context of the hole
 and amount of new' constructors - which says how many type binders are in the frame.
-Frames here are intrinsically typed, thus they also store type judgements of subexpressions.
+Frames here are intrinsically typed, thus they also store type judgements of subexpressions. They are defined in such way to reduce repetition, as otherwise we would need to introduce typing judgements for frames, and for every operation such as plugging or composition we would need to define it and then prove type preservation.
 
 ```
 data Frame (Θ : EContext) (Γ : Context) (T : Type) : Effects → Type → Effects →  Set where
@@ -232,14 +232,17 @@ postulate
 ↑Θ⊢t (⊢-> x x₁ x₂) = ⊢-> (↑Θ⊢t x) (↑Θ⊢effs x₁) (↑Θ⊢t x)
 ↑Θ⊢t (⊢forall x x₁) = ⊢forall (↑Θ⊢t x) (↑Θ⊢effs x₁)
 ↑Θ⊢t (⊢label x x₁ x₂) = ⊢label (↑Θ⊢e x) (↑Θ⊢t x₁) (↑Θ⊢effs x₂)
+↑Θ⊢te : ∀ {Δ Θ x T} → Δ ⨾ Θ ⊢ T ⦂te → Δ ⨾ pb Θ x ⊢ T ⦂te
+↑Θ⊢te (⊢e x) = ⊢e (↑Θ⊢e x)
+↑Θ⊢te (⊢t x) = ⊢t (↑Θ⊢t x)
 ↑Θ : ∀ { e Δ Θ Γ A E x} →  Δ ⨾ Θ ⨾ Γ ⊢ e ⦂ A / E → Δ ⨾ pb Θ x ⨾ Γ ⊢ e ⦂ A / E
 ↑Θ (⊢var x) = ⊢var x
 ↑Θ (⊢lam t) = ⊢lam (↑Θ t)
 ↑Θ (⊢weak x x₁ t) = ⊢weak x x₁ (↑Θ t)
 ↑Θ (⊢app t t₁) = ⊢app (↑Θ t) (↑Θ t₁)
 ↑Θ (⊢forall t) = ⊢forall (↑Θ t)
-↑Θ (⊢tapp x t) = ⊢tapp (↑Θ⊢t x) (↑Θ t)
-↑Θ (⊢new t) = ⊢new (↑Θ t)
+↑Θ (⊢tapp x t) = ⊢tapp (↑Θ⊢te x) (↑Θ t)
+↑Θ (⊢new tt te t) = ⊢new (↑Θ⊢t tt) (↑Θ⊢effs te) (↑Θ t)
 ↑Θ (⊢shift₀ x t t₁) = ⊢shift₀ (↑Θ⊢e x) (↑Θ t) (↑Θ t₁)
 ↑Θ (⊢reset₀ x t t₁ t₂) = ⊢reset₀ (↑Θ⊢e x ) (↑Θ t) (↑Θ t₁) (↑Θ t₂)
 ↑Θ (⊢label x) = ⊢label (↑Θ∋l x)

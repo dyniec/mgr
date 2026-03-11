@@ -166,6 +166,13 @@ module Typing where
             → Δ ⊢ t ⦂t
             → Δ ⊢ effs ⦂effs
             → Δ ⊢ L e at t / effs ⦂t 
+    data _⊢_⦂te : TContext → Type → Set where
+      ⊢e : ∀{Δ t}
+        → Δ ⊢ t ⦂e
+        → Δ ⊢ t ⦂te
+      ⊢t : ∀{Δ t}
+        → Δ ⊢ t ⦂t
+        → Δ ⊢ t ⦂te
     data _⊢_⦂effs where
         ⊢nil : ∀ {Δ}
             → Δ ⊢ nil ⦂effs
@@ -236,7 +243,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             → Δ , Γ ⊢ tlam k e ⦂ forallt k A E / F
 
         ⊢tapp : ∀ {Γ Δ e k A T E}
-            → Δ ⊢ T ⦂t
+            → Δ ⊢ T ⦂te
             → Δ , Γ ⊢ e ⦂ forallt k A E / E
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
@@ -244,33 +251,37 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
 The `new` construct introduces new type variable, and variable that represent respectively effect and label. Type of label stores effect bound by label (here `ttv zero`). `A1` / `A2` represent type and effect of delimited computation.
 ```
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
+            → Δ ⊢ A1 ⦂t
+            → Δ ⊢ E1 ⦂effs
             → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
             -----------------------
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
-Constructor `shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this expression should take continuation and returns same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
+Constructor `shift₀` uses only one effect `E` that's represented by label. For it to be properly typed expression inside shift bind extra variable --- where continuation will be plugged into. So type of this expression should take continuation and returns same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
 
 ```
-        ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
-            → Δ ⊢ ttv n ⦂e
-            → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+        ⊢shift₀ : ∀ {Γ Δ e e' A A' E E'}
+            → Δ ⊢ E ⦂e
+            → Δ , Γ ⊢ e' ⦂ (L E at  A' / E') / nil 
             → Δ , (Γ , A - E' > A' )  ⊢ e ⦂ A' / E'
             -----------------------------------------
-            → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
+            → Δ , Γ ⊢ shift₀ e' e ⦂ A / (E ∷ nil)
 
 ```
 The `reset₀` constructor has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle value returned from first argument. And third is label, which type stores type and effects of whole expression.
 ```
-        ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
-            → Δ ⊢ ttv n ⦂e
-            → Δ , Γ   ⊢ e ⦂ A / (ttv n ∷ E')
+        ⊢reset₀ : ∀ {Γ Δ e e' en A A' E E'}
+            → Δ ⊢ E ⦂e
+            → Δ , Γ   ⊢ e ⦂ A / (E ∷ E')
             → Δ , (Γ , A)   ⊢ en ⦂ A' /  E'
-            → Δ , Γ ⊢ e' ⦂ (L ttv n at  A' / E') / nil 
+            → Δ , Γ ⊢ e' ⦂ (L E at  A' / E') / nil 
             ------------------------------------
             → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
 ```
-% TODO close chapter
+
+Now that surface language is defined and typing rules for it, we must consider how it could be evaluated.
+
 
 \iffalse
 ```
