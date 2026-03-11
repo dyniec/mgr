@@ -19,11 +19,12 @@ import Data.Fin
 import Data.Nat.Properties
 ```
 \fi
-In this chapter we will define reduction relation and show that it is sound.
+This chapter defines reduction relation and show its soundness.
+
 # Values
-First, we need to define define values. Only abstractions, type abstractions and labels are considered values.
-Since values themselves don't perform any effects, they have `nil` effect. But rules for all of them have built-in weakening.
-We can use that to generalize their type and perform substitution where any effect is expected.
+Only abstractions, type abstractions and labels are considered values.
+Since the values themselves do not perform any effects, they have a `nil` effect. But rules for all of them have a built-in weakening.
+We can use that to generalize their type and perform a substitution  where any effect is expected.
 ```
 data Value : RExpr -> Set where
     vlam : ∀ { e } → Value (lam e)
@@ -36,11 +37,13 @@ gvalue vlab (⊢label x) = ⊢label x
 gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 ```
 # Frames
-What is called frame here would usually be refered to as evaluation context, but here the name is already taken by typing context.
-Here frame represents parts between `reset₀`s, or `reset₀` and `shift₀`.
-Frame type is parametrized by Θ Γ - typing context outside of frame,  T type of the hole.
-It's also indexed by Effects and Type of whole frame, Effects of the hole, typing context of the hole.
-Frames here are intrinsically typed, thus they also store type judgements of subexpressions. They are defined in such a way to reduce repetition, as otherwise we would need to introduce typing judgements for frames, and for every operation such as plugging or composition we would need to define it and then prove type preservation.
+In this thesis, the term "frame" stands for what is usually evaluation context in literature. This term was
+sellected to be sufficiently different from typing context.
+The frame represents parts between `reset₀`s, or between `reset₀` and `shift₀`.
+Frame type is parametrized by Θ Γ, that is, the typing context outside of frame, a T type of the hole.
+It's also indexed by whole frame type and effects, and  the effects of the hole, .
+Frames  are intrinsically typed, thus they also store type judgements of subexpressions.
+They are defined in such a way to reduce repetition.  Otherwise we would need to introduce typing judgements for frames, and then prove type preservation for every operation such as plugging or composition.
 
 ```
 data Frame (Θ : EContext) (Γ : Context) (T : Type) : Effects → Type → Effects →  Set where
@@ -102,8 +105,8 @@ fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 ```
 \fi
 We can prove how plugging and composition relate.
-Plugging expression into one frame and another results in same value and type
-as plugging expression into composition of two frames.
+Plugging an expression into one frame and result of that into another frame results in the same value and type
+as plugging the very same expression into a composition of two frames.
 ```
 ∘f-lemma : ∀ {Γ Θ  Eff Eff' Eff'' A B C }
   → (f1 : Frame Θ Γ B Eff A Eff' )
@@ -119,17 +122,9 @@ as plugging expression into composition of two frames.
 ∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (freset-label ee en x x₁ x₂ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ∘f-lemma (fshift-label e₁ x x₁ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
-```
-
-\fi
-Lifting frames into arbitrary context preserves types, same as with expressions.
-```
 ↑f : forall { Θ A B Eff Eff'  Γ' Γ}
   → Frame Θ Γ      A Eff B Eff' 
   → Frame Θ  (Γ' ⧺ Γ) A Eff B Eff' 
-```
-\iffalse
-```
 ↑f fempty = fempty
 ↑f (fapp₁ f e {t}) = fapp₁ (↑f f) e {e↑ t}
 ↑f (fapp₂ e {v} {t} f) = fapp₂ e {v} {e↑ t} (↑f f)
@@ -137,13 +132,16 @@ Lifting frames into arbitrary context preserves types, same as with expressions.
 ↑f (fshift-label e x x₁ f) = fshift-label e x (e↑ x₁) (↑f f)
 ```
 \fi
-Metaframe stores the whole evaluation context, it's split into frames separated by resets.
-Type parameters and indices work the same as in frame.
-Unlike in frame, metaframe now stores resets, so lists of effects inside and outside  of frame
-may differ. That means their difference represents a list of effects handled by the frame.
-This observation can be used to prove that for well typed expression (in empty typing context, and with condition that same labels have the same type) that decomposes into
-metaframe and `shift₀` expression, and metaframe should handle effect of the `shift₀`.
-Also this metaframe decomposes into two metaframes separated by `reset₀` which  has same label as mentioned  `shift₀`.
+A metaframe stores the whole evaluation context, split into frames separated by resets.
+Type parameters and indices work in the same way as in the frame.
+Unlike the frame, however the metaframe now stores `reset₀`s, so the lists of effects inside and outside the frame
+may differ. This means that their difference represents a list of effects handled by the frame.
+This observation can be used to prove that for well-typed expressions they decompose into
+metaframe and `shift₀` expression, and that metaframe should handle effect of the `shift₀`.
+This is true provided that typing context is empty.
+This metaframe then decomposes into two two further metaframes  separated by `reset₀` which has the same label
+as above-mentioned `shift₀`.
+
 ```
 data Metaframe (Θ : EContext) (Γ : Context) (T : Type) (Eff : Effects)
   : Type → Effects  → Set where
@@ -162,7 +160,7 @@ data Metaframe (Θ : EContext) (Γ : Context) (T : Type) (Eff : Effects)
     -------------------------------------------
     → Metaframe Θ  Γ T Eff  B Eff'' 
 ```
-Metaframes, same as frames, can be lifted into arbitrary contexts, plugged  and composed.
+Similarly to frames, metaframes can be lifted and plugged into arbitrary contexts.
 They can also be composed with simple frames.
 ```
 ↑m : forall {Θ  A B Eff Eff'  Γ' Γ}
@@ -203,8 +201,8 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 \fi
 
 # Reduction
-Since labels need to be allocated, the reduction relation is defined in terms of expression and state. State itself is just the next label to be allocated.
-As frames are intrinsically typed, we need to provide judgment representing well-typedness of expressions.
+Since labels need to be allocated, the reduction relation is defined in terms of the expression and state. The state itself is just the next label to be allocated.
+As metaframes are intrinsically typed, we need to provide judgments representing expressions well-typedness.
 \iffalse
 ```
 pb-v : ∀ {n} {A : Set} → Data.Vec.Vec A n → A → Data.Vec.Vec A (suc n)
@@ -311,8 +309,8 @@ data _↦_ : RExpr × State → RExpr × State → Set where
  -}
 
 ```
- Since simple reduction above is defined directly on redexes, we introduce -→ that represents reduction within metaframe.
- As we are only considering whole typed expressions, in place of `Γ` we use empty context. 
+ Since the simple reduction above is defined directly on redexes, we introduce -→ that represents the reduction within the metaframe.
+ As only whole typed expressions are considered, an empty context is used instead of Γ.
 ```
 {-
 infix 2 _-→_
