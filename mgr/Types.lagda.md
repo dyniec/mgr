@@ -8,15 +8,16 @@ open import Relation.Binary.PropositionalEquality using (_≡_;refl;_≢_)
 ```
 \fi
 
-# Kinds, Types, Effects and Expressions
-Variable and type variables are de Bruijn indices.
-
+# Syntax
+We start with presenting the syntax of the surface language. We use kinds to distinguish between types and effects.
 ```
 data Kind : Set where
     T : Kind
     E : Kind 
 ```
-Types  and Effects are defined mutally recursive. Type is either variable, arrow, forall or label. Effect is list of types, it's used in arrow and forall constructors of type to keep effects of computation underneath and it will be used in typing judgement. Label contructor just stores type variable bound to effect represented by the label and then Type and Effect of delimited computation.
+Types  and Effects are defined mutally recursive.Type is either variable, arrow, forall or label.
+We represent variables and type variables with de Bruijn indices.
+Effect is list of types, it's used in arrow and forall constructors of type to keep effects of computation underneath and it will be used in typing judgement. Label contructor just stores type variable bound to effect represented by the label and then Type and Effect of delimited computation.
 ```
 module Types where
     Id : Set
@@ -109,9 +110,8 @@ module TypeSubst where
 ```
 
 \fi
-
-# Contexts
-Contexts are represented as list of types, and type contexts are represented as lists of kinds. Judgements for membership of types have Peano numbers structure.
+# Typing judgements
+Typing Contexts are represented as list of types, and type contexts are represented as lists of kinds. Judgements for membership of types have Peano numbers structure.
 ```
 module Typing where
     infixl 5  _,_
@@ -203,7 +203,6 @@ module Typing where
 ```
 \fi
 
-# Typing judgements
 Expressions are extrinsically typed, thus typing judgements are represented separately.
 Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual. The noticable difference is that expressions for values are generic over effect they execute.
 ```
@@ -242,14 +241,14 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 ```
-`new` introduces new type variable, and variable that represent respectively effect and label. Type of label stores effect bound by label (here `ttv zero`). `A1` / `A2` represent type and effect of delimited computation.
+The `new` construct introduces new type variable, and variable that represent respectively effect and label. Type of label stores effect bound by label (here `ttv zero`). `A1` / `A2` represent type and effect of delimited computation.
 ```
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
             → (Δ , Kind.E) , (Γ , (L ttv zero at A1 / E1))  ⊢ e ⦂ TypeSubst.bump A / TypeSubst.bump' E
             -----------------------
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
-`shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this expression should take continuation and returns same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
+Constructor `shift₀` uses only one effect `ttv n` that's represented by label. For it to be properly typed expression inside shift bind extra variable - where continuation will be plugged into. So type of this expression should take continuation and returns same type as reset, with effects visible in reset. And continuation itself should be an arrow from type of shift to type of whole delimited computation with effects of same computation.  Since continuation passed there will have `reset₀`, that `reset₀`  will introduce effect `ttv n`, so it shouldn't be represented in type of argument.
 
 ```
         ⊢shift₀ : ∀ {Γ Δ e e' A A' n E'}
@@ -260,7 +259,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             → Δ , Γ ⊢ shift₀ e' e ⦂ A / (ttv n ∷ nil)
 
 ```
-`reset₀`  has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle value returned from first argument. And third is label, which type stores type and effects of whole expression.
+The `reset₀` constructor has three parameters, first is expression that will have access to effect, so its list of effects is expanded. Second is continuation that will handle value returned from first argument. And third is label, which type stores type and effects of whole expression.
 ```
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' n E'}
             → Δ ⊢ ttv n ⦂e
@@ -271,6 +270,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, `tapp` are defined mostly as usual
             → Δ , Γ   ⊢ reset₀ e en e' ⦂ A' / E'
         
 ```
+% TODO close chapter
 
 \iffalse
 ```
