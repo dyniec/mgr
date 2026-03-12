@@ -148,11 +148,12 @@ A metaframe stores the whole evaluation context, split into frames separated by 
 Type parameters and indices work in the same way as in the frame.
 Unlike the frame, however the metaframe now stores `reset₀`s, so the lists of effects inside and outside the frame
 may differ. This means that their difference represents a list of effects handled by the frame.
-This observation can be used to prove that for well-typed expressions they decompose into
-metaframe and `shift₀` expression, and that metaframe should handle effect of the `shift₀`.
-This is true provided that typing context is empty.
-This metaframe then decomposes into two two further metaframes  separated by `reset₀` which has the same label
-as above-mentioned `shift₀`.
+
+We will prove that for well-typed expressions they either are redex, value or they decompose into
+metaframe and `shift₀` expression.
+This and observation about diff-lists, will allow as to prove that if pure well-typed expression
+decomposes into shift and metaframe,
+then this metaframe should handle `shift₀`'s effect. Thus it has matching `reset₀` inside of frame, therefore whole expression is also a redex.
 
 ```
 data Metaframe (Θ : EContext) (Γ : Context) (T : Type) (Eff : Effects)
@@ -214,7 +215,7 @@ _f∘m_ f (mframe  f' m) = mframe (f ∘f f') m
 
 # Reduction
 Since labels need to be allocated, the reduction relation is defined in terms of the expression and state. The state itself is just the next label to be allocated.
-As metaframes are intrinsically typed, we need to provide judgments representing expressions well-typedness.
+As metaframes are intrinsically typed, we need to provide judgements representing expressions well-typedness.
 \iffalse
 ```
 pb-v : ∀ {n} {A : Set} → Data.Vec.Vec A n → A → Data.Vec.Vec A (suc n)
@@ -291,13 +292,14 @@ private
         Θ  : EContext
 ```
 \fi
-We define reduction relation parametrised by both expressions and typing jugmenets before and after reduction.
+We define reduction relation parametrised by both expressions and typing judge\-menets before and after reduction.
+With this approach, the definition itself is a proof of type preservation.
 ```
     
 data _⨾_↦_⨾_⨾_ : (e : RExpr)
  → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
  → (Θ' : EContext)
- →(e' : RExpr)
+ → (e' : RExpr)
  → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
 ```
 Reduction of `new` constructor replaces bound variable with allocated label, and type variable with entry in store typing. It also updates effects context, as we just allocated an effect.
@@ -363,7 +365,11 @@ We replace whole computation up to and including reset with computation under `s
 ```
  Since the simple reduction above is defined directly on redexes, we introduce `⟶` that represents the reduction within the metaframe.
 ```
-data _⨾_⟶_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → (Θ' : EContext) →(e' : RExpr) → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
+data _⨾_⟶_⨾_⨾_ : (e : RExpr)
+  → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+  → (Θ' : EContext)
+  →(e' : RExpr)
+  → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
   ⟶frame : ∀ { Θ' e e' e1 e1'  A T Eff  } → (f : Metaframe Θ ∅ A   Eff T  E)
     → (t1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / E )
     → (t1' : ∅ ⨾ Θ' ⨾ ∅ ⊢ e1' ⦂ A / E )
@@ -376,6 +382,8 @@ data _⨾_⟶_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) �
     →  e ⨾ te ⟶ Θ' ⨾ e' ⨾ te'
 ```
 # Progress
+Since the subject reduction is builtin into the definition of the reduction,
+we only need to prove progress to ensure type safety.
 We introduce progress datatype to represent progress, well typed expression is either value, or can reduce.
 ```
 data Progress :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / nil) → Set where
@@ -438,6 +446,4 @@ progress e t with decompose e t
 ```
 \fi
 
-## Preservation
-Current definition of reduction relation would yield  preservation immediately since, frames and expressions are well typed, and reduction relation requires typing judgements.
 
