@@ -321,28 +321,26 @@ data _⨾_↦_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) �
   → {tl : ∅ ⨾ Θ ⨾ ∅  ⊢ e' ⦂ (L T at  B / E) / nil }
   → reset₀ V en e' ⨾ (⊢reset₀ tt tl tv ten) ↦ Θ ⨾ RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁ ⨾ RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₂
 
-{-
- reset₀-k : ∀ {es en e' e s n Θ A T Eff Eff' B A' E' ls lr}
-   → { f : Metaframe Θ ∅ T Eff A Eff'  }
-   → ∀ {cont-type}
-   -> Value (e')
-   --shift
-   → {ts : ∅ ⨾ Θ ⨾ ∅ ⊢ (shift₀ e' es) ⦂ T / Eff'}
-   → {tes : ∅ ⨾ Θ ⨾ (∅ , T - Eff' > B) ⊢ es ⦂ B / Eff' }
-   → {tls : ∅ ⨾ Θ ⨾ ∅ ⊢ e' ⦂ (L ttv ls at B / Eff') /  nil }
-   → {tlvs : ∅ ⨾ Θ  ⊢  ttv lr ⦂e }
-   --reset
-   → {te : Δ ⨾ ∅ ⊢ e ⦂ A' / (ttv lr ∷ E') }
-   → {ten : Δ ⨾ ∅ , A' ⊢ en ⦂ T / Eff }
-   → {tlr : Δ ⨾ ∅ ⊢ e' ⦂ (L ttv lr at T / Eff) /  nil }
-   → {tlvr : Δ  ⊢  ttv lr ⦂e }
-   → (proj₁ (mplug  f (shift₀ e' es) ts)) ≡ e
-   → reset₀ e en e' ,′ s
-     ↦ RExprSubstTyped._[_] es
-       (lam (reset₀ (proj₁ (mplug (↑m {Γ' = ∅ , T} f) (var 0) (⊢var Z))) en e'))
-       {te = tes} {te1 = gvalue {E = Eff} vlam cont-type}
-       .proj₁  ,′ s
- -}
+ reset₀-l : ∀ {Θ es e' El A B C E' e en}
+    → {elabel : ∅ ⨾ Θ ⊢ El ⦂e }
+    → {tlabel : ∅ ⨾ Θ ⨾ ∅ ⊢ e' ⦂ (L El at  B / E') / nil }
+    → {tes : ∅ ⨾ Θ ⨾ (∅ , A - E' > B )  ⊢ es ⦂ B / E' }
+    → {tshift : ∅ ⨾ Θ ⨾ ∅ ⊢ shift₀ e' es ⦂ A / (El ∷ nil)}
+    → {f : Metaframe Θ ∅ A  (El ∷ E') C  (El ∷ nil)  }
+    → e ≡ mplug f (shift₀ e' es) tshift .proj₁
+    → {te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ C / (El ∷ E') }
+    → {ten : ∅ ⨾ Θ ⨾ (∅ , C) ⊢ en ⦂ B / ( E') }
+    →  reset₀ e en e' ⨾ ⊢reset₀ elabel tlabel te ten
+    ↦ Θ ⨾ (RExprSubstTyped._[_] es
+    (lam (reset₀ ((mplug (↑m {Γ' = ∅ , A} f) (var 0 ) (⊢var Z)) .proj₁) en  e'))
+    {te = tes} {te1 = gvalue {E = E'} vlam (⊢lam (⊢reset₀ elabel (e↑ tlabel)
+      (e↑ (mplug (↑m f) (var 0) (⊢var Z) .proj₂)) (e↑ ten)))} .proj₁)
+    ⨾  (RExprSubstTyped._[_] es
+    (lam (reset₀ ((mplug (↑m {Γ' = ∅ , A} f) (var 0 ) (⊢var Z)) .proj₁) en  e'))
+    {te = tes} {te1 = gvalue {E = E'} vlam (⊢lam (⊢reset₀ elabel (e↑ tlabel)
+      (e↑ (mplug (↑m f) (var 0) (⊢var Z) .proj₂)) (e↑ ten)))} .proj₂)
+
+
 
 ```
  Since the simple reduction above is defined directly on redexes, we introduce -→ that represents the reduction within the metaframe.
