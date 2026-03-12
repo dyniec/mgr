@@ -287,7 +287,6 @@ postulate
 ```
 \fi
 ```
--- infix 2 _↦_
 State = EContext
 private
     variable
@@ -346,15 +345,17 @@ data _⨾_↦_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) �
  Since the simple reduction above is defined directly on redexes, we introduce -→ that represents the reduction within the metaframe.
  As only whole typed expressions are considered, an empty context is used instead of Γ.
 ```
-{-
-infix 2 _-→_
-data _-→_ : RExpr × State → RExpr × State → Set where
-  -→frame : ∀ {e1 e1' e2 e2' s s' n Δ Δ' A T Eff Eff' t1 t2} → (f : Metaframe Δ ∅ T Eff A Eff' Δ' n)
-    → e1' ,′ s ↦ e2' ,′ s'
-    → Data.Product.proj₁ (mplug f e1' t1) ≡ e1
-    → Data.Product.proj₁ (mplug f e2' t2) ≡ e2
-    →  (e1 ,′ s) -→ (e2 ,′ s')
--}
+data _⨾_⟶_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → (Θ' : EContext) →(e' : RExpr) → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
+  ⟶frame : ∀ { Θ' e e' e1 e1'  A T Eff  } → (f : Metaframe Θ ∅ A   Eff T  E)
+    → (t1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / E )
+    → (t1' : ∅ ⨾ Θ' ⨾ ∅ ⊢ e1' ⦂ A / E )
+    → e1 ⨾ t1   ↦ Θ' ⨾ e1' ⨾ t1'
+    → (Θstep : ∀ {A E B Eff} → Metaframe Θ ∅ A E B Eff → Metaframe Θ' ∅ A E B Eff )
+    → (mplug f e1 t1) .proj₁ ≡ e
+    → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+    →  (mplug (Θstep f) e1' t1') .proj₁ ≡ e'
+    → (te' : ∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E)
+    →  e ⨾ te ⟶ Θ' ⨾ e' ⨾ te'
 ```
 # Progress
 
