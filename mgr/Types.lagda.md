@@ -17,7 +17,7 @@ data Kind : Set where
 ```
 Types  and effects are defined as mutually recursive. A type is either a type variable `ttv`, an arrow, a `forallt` or a label `L eff at A / E`.
 We represent variables and type variables with de Bruijn indices.
-Effects datatype stores list of effects (represented as types) , it's used in arrow and forall constructors of type to mark effects of computation underneath. It will be also used in typing judgements to mark effects available in computation. Constructor `L` represents type of label expressions. It just stores an effect `eff` represented by a label and then type and effect of delimited computation labelled by this label.
+Effects datatype stores list of effects (represented as types), it's used in arrow and forall constructors of type to mark effects of computation underneath. It will be also used in typing judgements to mark effects available in computation. Constructor `L` represents type of label expressions. It just stores an effect `eff` represented by a label and then type and effect of delimited computation labelled by this label.
 ```
 module Types where
     Id : Set

@@ -42,7 +42,7 @@ In this thesis, the term "frame" stands for what is usually evaluation context i
 sellected to be sufficiently different from typing context.
 The frame represents parts between `reset₀`s, or between `reset₀` and `shift₀`.
 Frame type is parametrized by Θ Γ, that is, the typing context outside of frame, a T type of the hole.
-It's also indexed by whole frame type and effects, and  the effects of the hole, .
+It's also indexed by whole frame type and effects, and  the effects of the hole.
 Frames  are intrinsically typed, thus they also store type judgements of subexpressions.
 They are defined in such a way to reduce repetition. Otherwise we would need to introduce typing judgements for frames, and then prove type preservation for every operation such as plugging or composition.
 
@@ -409,8 +409,8 @@ data Decompose :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set w
 ```
 Proof of progress has a type of
 `progress : ∀ {A Δ Effs} → (s  : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / nil) → Progress s e`.
-In such proof We  use auxiliary struct `Decompose` which builder walk down well typed expression recursively
-  until it has reached either value, simple reduction (app, tapp, new), or shift, and return it with the surrounding metaframe.
+In such proof we  use auxiliary struct `Decompose` of which builder `decompose` walks down well typed expression recursively
+  until it has reached either value, simple reduction (app, tapp, new), or shift, and its  surrounding metaframe.
 
 In case of shift, such a metaframe by construction should have an effect handler that has the same effect as shift.
 So we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in context.
