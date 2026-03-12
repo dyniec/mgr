@@ -59,10 +59,12 @@
 
 \chapter{Introduction}
 
-Control operators have been present in languages for a long time. One notable example is the SCHEME programming language which originated in the 70s\cite{scheme} and provides a $call/cc$ operator. Such operators enable non-local jumps, which might be familiar to users of imperative languages with goto operator. But those operators unlike goto are handled by capturing continuation, which is stored as first-class value, able to be passed, called or dropped.
-Operator $call/cc$  when called, catches whole rest of program in the continuation. When this continuation is called, it aborts rest of the program and replaces it with this continuation. Thus in example program \texttt{10 + (call/cc (\lambda k . k (2 + (k 1))))} only inner $k$ would be called and result of whole program would be 11.
+Control operators have been present in languages for a long time. One notable example is the SCHEME programming language which originated in the 70s\cite{scheme} and provides a $call/cc$ operator. Such operators enable non-local jumps, which might be familiar to users of imperative languages with the goto operator. But those operators unlike goto are handled by capturing continuation, which is stored as first-class value, able to be passed, called or dropped.
+Operator $call/cc$  when called, catches the whole rest of the program in the continuation.
+When this continuation is called, it aborts the rest of the program and replaces it with this continuation.
+Thus in the example program \texttt{10 + (call/cc (\lambda k . k (2 + (k 1))))} only inner $k$ would be called and the result of the whole program would be 11.
 
-Operators for delimited control introduced by Danvy and Filinski\cite{abstracting} and independently by Felleisen\cite{prompts} allow to control continuations more precisely.
+Operators for delimited control introduced by Danvy and Filinski\cite{abstracting} and independently by Felleisen\cite{prompts} allow more precise control of continuations.
  They usually come in pairs: for example, the operator \texttt{reset} delimits continuations caught by \texttt{shift}. This allows localized use of control effects, as the scope of the captured continuation is much more visible, while  still allowing non-local execution, which enables interesting computational effects such as emulating non-determinism, exceptions and failure.
 Usually such calculi jump from $shift$ to the closest enclosing $reset$.
 Reduction rule looks like this:
@@ -81,7 +83,7 @@ Formalising such a calculus could serve as a step in to demonstrate soundness of
 
 
 The soundness of the presented language is proved using the standard technique of progress and preservation\cite{syntactic}\cite{harper}.
-Formalisation work was done in Agda 2.8\cite{agda} using \texttt{agda-stdlib}\cite{agda-stdlib} without use of third-party dependencies. The accompanying code archive, available at \href{https://github.com/dyniec/mgr}{https://github.com/dyniec/mgr}, also features nix derivation describing the exact environment to build both package and this paper to ensure reproducibility.
+Formalisation work was done in Agda 2.8\cite{agda} using \texttt{agda-stdlib}\cite{agda-stdlib} without use of third-party dependencies. The accompanying code archive, available at \href{https://github.com/dyniec/mgr}{https://github.com/dyniec/mgr}, also features nix derivation describing the exact environment used to build both package and this document, to ensure reproducibility.
 
 
 \chapter{Surface language}
