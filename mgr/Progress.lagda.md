@@ -284,43 +284,64 @@ postulate
 --pb-v-last {suc n} (x₁ Data.Vec.∷ xs) x rewrite pb-v-last xs x  = refl
 --pb-last = {!!}
   
-```
-\fi
-```
-State = EContext
 private
     variable
         A B : Type
         E E' : Effects
         Θ  : EContext
-data _⨾_↦_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → (Θ' : EContext) →(e' : RExpr) → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
+```
+\fi
+We define reduction relation parametrised by both expressions and typing jugmenets before and after reduction.
+```
+    
+data _⨾_↦_⨾_⨾_ : (e : RExpr)
+ → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+ → (Θ' : EContext)
+ →(e' : RExpr)
+ → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
+```
+Reduction of `new` constructor replaces bound variable with allocated label, and type variable with entry in store typing. It also updates effects context, as we just allocated an effect.
+```
  ↦new : ∀ {e Θ  E T A1 E1}
-  → {te : (∅ , Kind.E) ⨾ Θ ⨾(∅ , L ttv zero at A1 / E1)  ⊢ e ⦂ TypeSubst.bump T / TypeSubst.bump' E}
+  → (te : (∅ , Kind.E) ⨾ Θ ⨾(∅ , L ttv zero at A1 / E1)  ⊢ e ⦂ TypeSubst.bump T / TypeSubst.bump' E)
   → {tn : ∅ ⨾ Θ ⨾ ∅  ⊢ new e ⦂ T / E}
   → new e ⨾ tn  ↦   pb Θ (A1 ,′ E1) ⨾ (new-subst te tn) .proj₁  ⨾ new-subst te tn .proj₂
-  
- β-lam-app : ∀ {e V Θ A B E }
+```
+Reduction of application applied to abstraction, and type application to type abstraction are defined in terms of substitution.
+```
+ lam-app : ∀ {e V Θ A B E }
   → {te : ∅ ⨾ Θ ⨾ (∅ , A) ⊢ e ⦂ B / E}
   → {tv : ∅ ⨾ Θ ⨾ ∅ ⊢ V ⦂ A / E}
   → Value (lam e)
   → (v : Value V)
-  → app (lam e) V ⨾ ⊢app (⊢lam te) tv ↦ Θ ⨾  (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)}) .proj₁ ⨾ (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})  .proj₂ 
+  → app (lam e) V ⨾ ⊢app (⊢lam te) tv ↦ Θ ⨾
+  (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)}) .proj₁ ⨾
+  (RExprSubstTyped._[_] e V {te = te} {te1 = (gvalue v tv)})  .proj₂ 
 
- β-tlam-tapp : ∀ {k e T  }
+ tlam-tapp : ∀ {k e T  }
    → Value (tlam k e)
     → (tt : ∅ ⨾ Θ  ⊢ T ⦂te k)
     → (tv : ∅ ⨾ Θ ⨾ ∅ ⊢ (tlam k e) ⦂ forallt k A E / E)
    → tapp (tlam k e) T ⨾ ⊢tapp tt tv ↦ Θ ⨾ e RExprSubst.e[t T ]  ⨾ tapp-subst tt tv
-
+```
+Reduction of reset where inner computation returns value, just substitutes returned value in success continuation.
+```
  reset₀-vl : ∀ {V e' en  Θ  A B E T }
   → ( v : Value V)
   → {tt : ∅ ⨾ Θ  ⊢ T ⦂e }
   → {tv : ∅ ⨾ Θ ⨾ ∅ ⊢ V ⦂ A / T ∷ E}
   → {ten : ∅ ⨾ Θ ⨾ (∅ , A) ⊢ en ⦂ B / E}
   → {tl : ∅ ⨾ Θ ⨾ ∅  ⊢ e' ⦂ (L T at  B / E) / nil }
-  → reset₀ V en e' ⨾ (⊢reset₀ tt tl tv ten) ↦ Θ ⨾ RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₁ ⨾ RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₂
+  → reset₀ V en e' ⨾ (⊢reset₀ tt tl tv ten)
+  ↦ Θ ⨾ RExprSubstTyped._[_] en V
+  {te = ten} {te1 = (gvalue v tv)} .proj₁ ⨾
+  RExprSubstTyped._[_] en V {te = ten} {te1 = (gvalue v tv)} .proj₂
+```
+Reduction `shift` and `reset` is the most complicated reduction rule. We use metaframes and equivalence relation to express decomposition of expression into a `shift` and a continuation.
+We replace whole computation up to and including reset with computation under `shift` of which first argument is replaced with captured continuation from `shift` up to and including `reset`.
 
- reset₀-l : ∀ {Θ es e' El A B C E' e en}
+```
+ reset₀-k : ∀ {Θ es e' El A B C E' e en}
     → {elabel : ∅ ⨾ Θ ⊢ El ⦂e }
     → {tlabel : ∅ ⨾ Θ ⨾ ∅ ⊢ e' ⦂ (L El at  B / E') / nil }
     → {tes : ∅ ⨾ Θ ⨾ (∅ , A - E' > B )  ⊢ es ⦂ B / E' }
@@ -339,11 +360,8 @@ data _⨾_↦_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) �
     {te = tes} {te1 = gvalue {E = E'} vlam (⊢lam (⊢reset₀ elabel (e↑ tlabel)
       (e↑ (mplug (↑m f) (var 0) (⊢var Z) .proj₂)) (e↑ ten)))} .proj₂)
 
-
-
 ```
- Since the simple reduction above is defined directly on redexes, we introduce -→ that represents the reduction within the metaframe.
- As only whole typed expressions are considered, an empty context is used instead of Γ.
+ Since the simple reduction above is defined directly on redexes, we introduce `⟶` that represents the reduction within the metaframe.
 ```
 data _⨾_⟶_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → (Θ' : EContext) →(e' : RExpr) → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
   ⟶frame : ∀ { Θ' e e' e1 e1'  A T Eff  } → (f : Metaframe Θ ∅ A   Eff T  E)
@@ -358,18 +376,20 @@ data _⨾_⟶_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) �
     →  e ⨾ te ⟶ Θ' ⨾ e' ⨾ te'
 ```
 # Progress
-
+We introduce progress datatype to represent progress, well typed expression is either value, or can reduce.
 ```
-data Progress :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set where
+data Progress :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / nil) → Set where
   done : ∀ {e} →  Value e
-    → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+    → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / nil)
     → Progress e te
   step : ∀ {e1 e2 Θ'}
-    → (te1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / E)
-    → (te2 : ∅ ⨾ Θ' ⨾ ∅ ⊢ e2 ⦂ A / E)
+    → (te1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / nil)
+    → (te2 : ∅ ⨾ Θ' ⨾ ∅ ⊢ e2 ⦂ A / nil)
     → e1 ⨾ te1 ⟶ Θ' ⨾ e2 ⨾ te2
     → Progress e1 te1
-
+```
+Decompose datatype is similar to progress.Since we are building it upwards we might encounter shift but not yet it's corresponding reset. Because of that we introduces extra contructor that represents shift and it's surrounding frame. 
+```
 data Decompose :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set where
   de-simpl-redex : ∀ {e1 e2 Θ'} 
     → (te1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / E)
@@ -382,42 +402,42 @@ data Decompose :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set w
   de-shift : ∀ { T Eff A  Eff' es es' e l t} 
     → (f : Metaframe  Θ ∅ T Eff A Eff' )
     →  shift₀ (label l) es' ≡ es
-    → Data.Product.proj₁ (mplug f es t)   ≡ e
+    → Data.Product.proj₁ (mplug f es t) ≡ e
     → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
     → (ts : ∅ ⨾ Θ ⨾ ∅ ⊢ es ⦂ T / E')
     → Decompose  e te 
-
 ```
-
-Proof of progress would have a type of
-`progress : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Progress s e`.
-In such proof We would use auxiliary struct `Decompose` which builder would  walk down well typed expression recursively
+Proof of progress has a type of
+`progress : ∀ {A Δ Effs} → (s  : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / nil) → Progress s e`.
+In such proof We  use auxiliary struct `Decompose` which builder walk down well typed expression recursively
   until it has reached either value, simple reduction (app, tapp, new), or shift, and return it with the surrounding metaframe.
 
 In case of shift, such a metaframe by construction should have an effect handler that has the same effect as shift.
-So we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in
-context.
-
-## Preservation
-Current definition of reduction relation would yield proof of preservation immediately if progress was given since, frames and expressions are well typed,
-and reduction relation requires proofs to plug into metaframes or substitution.
-
+So we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in context.
+```
+decompose : ∀ {A  Effs} → (e : RExpr) → (t : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose  e t
+progress : ∀ {A } → (e : RExpr) → (t : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / nil) → Progress  e t
+```
 \iffalse
 ```
-{-
-decompose : ∀ {A Δ Effs} → (s : State) → (e : RExpr) → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose s e
-decompose s (lam e) (⊢lam t) = de-val vlam
-decompose s e (⊢forall t) = de-val vLam
-decompose s e (⊢label x) = de-val vlab
-decompose s e (⊢weak x x₁ t) = decompose s e t
-decompose s e (⊢tapp x t) = {!!}
---decompose s e (⊢new t) = de-simpl-redex mfempty (-→frame mfempty ↦new refl refl) (⊢new t)
-decompose s e (⊢new {Δ = Δ} {A = A} {E = Eff} t) = de-simpl-redex mfempty ( -→frame {Δ = Δ} {A = A} {Eff = Eff} {t1 = ⊢new t} {t2 = {!!}}  mfempty ↦new refl refl ) (⊢new t)
-decompose s e (⊢app t t₁) = {!!}
---decompose s e (⊢tapp x t) = {!!}
-decompose s e (⊢new' t) = {!!}
-decompose s e (⊢shift₀ x t t₁) = de-shift mfempty refl {!!} (⊢shift₀ x t t₁) {!!}
-decompose s e (⊢reset₀ x t t₁ t₂) = {!!}
--}
+decompose  e (⊢lam t) = de-val vlam (⊢lam t)
+decompose  e (⊢forall t) = de-val vLam (⊢forall t)
+decompose  e (⊢label x) = de-val vlab (⊢label x)
+decompose e (⊢weak x x₁ t) = {!!}
+decompose e (⊢app t t₁) = {!!}
+decompose e (⊢tapp x t) = {!!}
+decompose e (⊢new x x₁ t) = de-simpl-redex (⊢new x x₁ t) {!!} (⟶frame mfempty (⊢new x x₁ t) (new-subst t (⊢new x x₁ t) .proj₂) (↦new t) {!!} refl (⊢new x x₁ t) refl {!!})
+decompose e (⊢shift₀ x t t₁) = {!!}
+decompose e (⊢reset₀ x t t₁ t₂) = {!!}
+
+progress e t with decompose e t
+...| de-val v te = done v t
+...| de-simpl-redex x x1 x2 = step t x1 x2
+...| de-shift x x1 x2 x3 x4 = {!!}
+
 ```
 \fi
+
+## Preservation
+Current definition of reduction relation would yield  preservation immediately since, frames and expressions are well typed, and reduction relation requires typing judgements.
+

@@ -89,7 +89,7 @@ Formalisation work was done in Agda 2.8. The code archive also features nix deri
 \chapter{Semantics}
 \input{src_tex/Progress}
 \chapter{Discussion/Closing thoughts}
-This thesis presents a language with labeled delimited continuations together with a partial language formalisation. Two term languages are defined, alongside typing judgements for them and translations between them. Typing is preserved when embedding surface language in runtime language. Intrinsically typed frames and metaframes allow to define the reduction relation and show how it preserves types. Since both frames and metaframes are typed, we statically know which effects are handled by the frames. This formalisation could be further expanded to prove the language correctness and its translations. 
+This thesis presents a language with labeled delimited continuations together with a partial language formalisation. Two term languages are defined, alongside typing judgements for them and translations between them. Typing is preserved when embedding surface language in runtime language. Intrinsically typed frames and metaframes allow to define the reduction relation and show how it preserves types. Since both frames and metaframes are typed, we statically know which effects are handled by the frames. We defined reduction rules for this language in such a way that immediately yields preservation. This formalisation could be further expanded to prove the language correctness fully and its translation to other targets. 
 \begin{thebibliography}{1}
 \input{bibitems.tex}
 \end{thebibliography}
