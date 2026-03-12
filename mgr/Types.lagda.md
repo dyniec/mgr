@@ -35,6 +35,7 @@ open Types
 Constructors of expressions such as `var`, `lam`, `app`, `tlam`, and `tapp` behave as usual.
 `var` is a de Bruijn indexed variable, `lam` is a lambda abstraction, `app` is a function application, `tlam` is a type abstraction, storing a kind of abstracted type and `tapp` is type application.
 Other constructors are responsible for continuations and labels. Constructor `new` binds labels used by `shift₀` and `reset₀` expressions to pair them up.
+
 Constructor `shift₀` stores the label and expression (parametrized by continuation) that replaces whole delimited computation.
 The last constructor of expressions is `reset₀ e (v . en) e'` which has 3 arguments, the last one `e'` is label that is used to match up `reset₀`s with `shift₀`s. First argument `e` is delimited computation where `shift₀` can be used. So when `shift₀ k.es` is being evaluated, it aborts enclosing up to corresponding  `reset₀`, replacing it with  `es` is being evaluated with `k` bound to continuation representing evaluation context between `shift₀` and its `reset₀`.
 Second argument `x. en` is used when  no corresponding `shift₀` aborts during evaluation of `e`. If `e` evaluates to `v`, then whole `reset₀` reduces to `en` where `x` is bound to `v`.

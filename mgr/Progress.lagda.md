@@ -151,7 +151,7 @@ may differ. This means that their difference represents a list of effects handle
 
 We will prove that for well-typed expressions they either are redex, value or they decompose into
 metaframe and `shift₀` expression.
-This and observation about diff-lists, will allow as to prove that if pure well-typed expression
+This and observation about diff-lists, will allow us to prove that if pure well-typed expression
 decomposes into shift and metaframe,
 then this metaframe should handle `shift₀`'s effect. Thus it has matching `reset₀` inside of frame, therefore whole expression is also a redex.
 

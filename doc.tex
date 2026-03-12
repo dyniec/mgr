@@ -66,15 +66,15 @@ Thus in the example program \texttt{10 + (call/cc (\lambda k . k (2 + (k 1))))} 
 
 Operators for delimited control introduced by Danvy and Filinski\cite{abstracting} and independently by Felleisen\cite{prompts} allow more precise control of continuations.
  They usually come in pairs: for example, the operator \texttt{reset} delimits continuations caught by \texttt{shift}. This allows localized use of control effects, as the scope of the captured continuation is much more visible, while  still allowing non-local execution, which enables interesting computational effects such as emulating non-determinism, exceptions and failure.
-Usually such calculi jump from $shift$ to the closest enclosing $reset$.
+Usually such calculi jump from \texttt{shift} to the closest enclosing $reset$.
 Reduction rule looks like this:
-\texttt{(reset E[(shift k expr)])  => (reset ((\lambda k.expr) (\lambda v.(reset E[v]))))} therefore,  example \texttt{(reset (+ 1 (shift k (k (k 0)))))} would call $k$ twice and result in value $2$.
+\texttt{(reset E[(shift k expr)])  \\=> (reset ((\lambda k.expr) (\lambda v.(reset E[v]))))} therefore,  example \texttt{(reset (+ 1 (shift k (k (k 0)))))} would call $k$ twice and result in value $2$.
 
 Danvy and Filinski\cite{functional_abstraction} also describe similar operators \texttt{shift$_0$} and \texttt{reset$_0$}. Their reduction does not introduce outermost \texttt{reset$_0$}, therefore subsequent calls to \texttt{shift$_0$} remove innermost \texttt{reset$_0$} one by one.
-Their example showcases this behaviour \texttt{reset$_0$(3 + reset$_0$(4 * shift$_0$ k in shift$_0$ c in E))}. The continuation $k$ would be bound to \texttt{\lambda x. 4*x} and $c$ to \texttt{\lambda x.3+x}.
+Their example showcases this behaviour \texttt{reset$_0$(3 + reset$_0$(4 * shift$_0$ k in shift$_0$ c in E))}. The continuation $k$ would be bound to \texttt{\lambda x.4*x} and $c$ to \texttt{\lambda x.3+x}.
 In addition Dybvig et al.\cite{monadic} show the formalisation of delimited control with multiple prompts where labels are used to match the corresponding operators.
 
-
+\pagebreak
 The aim of this thesis is to formalise a typed version of such a calculus with polymorphic types (similar to Piróg, Polesiuk and Sieczkowski\cite{typed_equivalence}), but for labeled delimited continuations (like Ikemori, Cong and  Masuhara\cite{typed_equivalence_label}).
 \\
 Compared to Ikemori et al., the main difference in our work is the use of first-class labels for delimited continuations, similarly to how Xie et al.\cite{first_class_names} used them for algebraic effects.
@@ -83,7 +83,7 @@ Formalising such a calculus could serve as a step in to demonstrate soundness of
 
 
 The soundness of the presented language is proved using the standard technique of progress and preservation\cite{syntactic}\cite{harper}.
-Formalisation work was done in Agda 2.8\cite{agda} using \texttt{agda-stdlib}\cite{agda-stdlib} without use of third-party dependencies. The accompanying code archive, available at \href{https://github.com/dyniec/mgr}{https://github.com/dyniec/mgr}, also features nix derivation describing the exact environment used to build both package and this document, to ensure reproducibility.
+Formalisation work was done in Agda 2.8\cite{agda} using \texttt{agda-stdlib}\cite{agda-stdlib}, without use of third-party dependencies. The accompanying code archive, available at \href{https://github.com/dyniec/mgr}{https://github.com/dyniec/mgr}, also features nix derivation describing the exact environment used to build both package and this document, to ensure reproducibility.
 
 
 \chapter{Surface language}

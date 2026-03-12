@@ -127,7 +127,7 @@ A separate term for the label stores the allocated label identifier.
 \fi
 Since the grammar of types has changed, we need to redefine contexts. This means almost all typing judgements need to be redefined.
 A new context is introduced that maps label values to type and effects of the delimiter.
-This technique is reminiscent of technique described by Pierce\cite[Chapter 13]{tapl},typing rules take maps from locations to types in order to ensure allocations' type safety. This context is represented by a finite vector of types and effects. As they are only used during evaluation, the types and effects have no free variables.
+This technique is reminiscent of technique described by Pierce\cite[Chapter 13]{tapl}, typing rules take maps from locations to types in order to ensure allocations' type safety. This context is represented by a finite vector of types and effects. As they are only used during evaluation, the types and effects have no free variables.
 ```
 module Typing where
     open RuntimeExpr
