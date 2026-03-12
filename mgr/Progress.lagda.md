@@ -360,29 +360,33 @@ data _⨾_⟶_⨾_⨾_ : (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) �
 # Progress
 
 ```
-{-
-data Decompose : State → (e : RExpr)  → Set where
-  de-simpl-redex : ∀ {e e2 s s' n Δ Δ' A T Eff Eff'} 
-    → (f : Metaframe Δ ∅ T Eff A Eff' Δ' n)
-    → (e ,′ s) -→ (e2 ,′ s')
-    → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
-    → Decompose s e 
-  de-shift : ∀ {s Δ Δ' T Eff A n Eff' es es' e l t} 
-    → (f : Metaframe Δ ∅ T Eff A Eff' Δ' n)
+data Progress :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set where
+  done : ∀ {e} →  Value e
+    → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+    → Progress e te
+  step : ∀ {e1 e2 Θ'}
+    → (te1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / E)
+    → (te2 : ∅ ⨾ Θ' ⨾ ∅ ⊢ e2 ⦂ A / E)
+    → e1 ⨾ te1 ⟶ Θ' ⨾ e2 ⨾ te2
+    → Progress e1 te1
+
+data Decompose :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set where
+  de-simpl-redex : ∀ {e1 e2 Θ'} 
+    → (te1 : ∅ ⨾ Θ ⨾ ∅ ⊢ e1 ⦂ A / E)
+    → (te2 : ∅ ⨾ Θ' ⨾ ∅ ⊢ e2 ⦂ A / E)
+    → e1 ⨾ te1 ⟶ Θ' ⨾ e2 ⨾ te2
+    → Decompose e1 te1
+  de-val : ∀ {e} →  Value e
+    → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+    → Decompose e te
+  de-shift : ∀ { T Eff A  Eff' es es' e l t} 
+    → (f : Metaframe  Θ ∅ T Eff A Eff' )
     →  shift₀ (label l) es' ≡ es
-    → Data.Product.proj₁ (mplug f es t) ≡ e
-    → (t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff)
-    → (ts : Δ ⨾ ∅ ⊢ es ⦂ T / Eff')
-    → Decompose s e 
-  de-val : ∀ {Δ Eff A s e} → { t : Δ ⨾ ∅ ⊢ e ⦂ A / Eff}
-    -> Value e
-    → Decompose s e 
-data Progress : State → RExpr → Set where
-  done : ∀ {e s} →  Value e → Progress s e
-  step : ∀ {e1 s1 e2 s2}
-    → ( e1 ,′ s1 ) -→ ( e2 ,′ s2)
-    → Progress s1 e1
--}
+    → Data.Product.proj₁ (mplug f es t)   ≡ e
+    → (te : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E)
+    → (ts : ∅ ⨾ Θ ⨾ ∅ ⊢ es ⦂ T / E')
+    → Decompose  e te 
+
 ```
 
 Proof of progress would have a type of
