@@ -57,8 +57,14 @@ data Frame (Θ : EContext) (Γ : Context) (T : Type) : Effects → Type → Effe
     → Frame Θ Γ T Eff B E
   fapp₂ : ∀ {A B  Eff E} → (e : RExpr) → { v : Value e}
     → { ∅ ⨾ Θ ⨾ Γ ⊢ e ⦂ ( A - Eff > B) / Eff }
+    → Frame Θ Γ T Eff A E
     --------------------------------------------------------
-    → Frame Θ Γ T Eff A E  -> Frame Θ Γ T Eff B E 
+    → Frame Θ Γ T Eff B E 
+  ftapp : ∀ {A B  Eff E k}
+    → ∅ ⨾ Θ ⊢ B ⦂te k
+    --------------------------------------------------------
+    → Frame Θ Γ T Eff (forallt k A Eff) E
+    → Frame Θ Γ T (Eff TypeSubst.effs[t B ]) (A TypeSubst.[ B ] ) E 
   freset-label : ∀ {A E  A' Eff C}
     → (e en : RExpr)
     → ∅ ⨾ Θ  ⊢ C ⦂e
@@ -94,13 +100,16 @@ plug (fapp₁ f e₁ {te₁}) e t  with (plug f e t)
 ... | (res ,, tt) =  app res  e₁ ,, (⊢app tt te₁)
 plug (fapp₂ e₁ {_} {te₁} f) e t with (plug f e t)
 ... | (res ,, tt ) =  app e₁ res ,, ⊢app te₁ tt
+plug (ftapp {B = B} x f) e t with (plug f e t)
+... | (res ,, tt) = tapp res B ,, ⊢tapp x tt
 plug (freset-label ee en x x₁ x₂ f) e t with (plug f e t)
 ... | (res ,, tt) = (reset₀ ee en res) ,, ⊢reset₀ x tt x₁ x₂
 plug (fshift-label e₁ x x₁ f) e t with (plug f e t)
 ... | (res ,, tt) = (shift₀ res e₁) ,, ⊢shift₀ x tt x₁
 fempty ∘f F = F
-fapp₁ f e {t} ∘f F = fapp₁ (f ∘f F )  e {t} 
+fapp₁ f e {t} ∘f F = fapp₁ (f ∘f F )  e {t}
 fapp₂ e {v} {t} f ∘f F = fapp₂ e {v} {t} (f ∘f F)
+ftapp x f ∘f F = ftapp x (f ∘f F)
 freset-label e en x x₁ x₂ f ∘f F = freset-label e en x x₁ x₂ (f ∘f F)
 fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 ```
@@ -121,6 +130,7 @@ as plugging the very same expression into a composition of two frames.
 ∘f-lemma fempty f2 e t = refl
 ∘f-lemma (fapp₁ f1 e₁) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (fapp₂ e₁ f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
+∘f-lemma (ftapp x f1) f2 e t rewrite ∘f-lemma f1 f2 e t = refl
 ∘f-lemma (freset-label ee en x x₁ x₂ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ∘f-lemma (fshift-label e₁ x x₁ f) f2 e t rewrite ∘f-lemma f f2 e t = refl
 ↑f : forall { Θ A B Eff Eff'  Γ' Γ}
@@ -129,6 +139,7 @@ as plugging the very same expression into a composition of two frames.
 ↑f fempty = fempty
 ↑f (fapp₁ f e {t}) = fapp₁ (↑f f) e {e↑ t}
 ↑f (fapp₂ e {v} {t} f) = fapp₂ e {v} {e↑ t} (↑f f)
+↑f (ftapp t f) = ftapp t ( (↑f f ) ) 
 ↑f (freset-label e en x x₁ x₂ f) = freset-label e en x (e↑ x₁) (e↑ x₂) (↑f f)
 ↑f (fshift-label e x x₁ f) = fshift-label e x (e↑ x₁) (↑f f)
 ```
