@@ -20,7 +20,7 @@ import Data.Fin
 import Data.Nat.Properties
 ```
 \fi
-This chapter defines reduction relation and show its soundness.
+This chapter defines the reduction relation and shows its soundness.
 
 # Values
 Only abstractions, type abstractions and labels are considered values.
@@ -38,11 +38,11 @@ gvalue vlab (⊢label x) = ⊢label x
 gvalue {Δ} v (⊢weak x x₁ x₂) {F} = (⊢weak x ( <⦂e-refl {Δ} {F}) (gvalue v x₂))
 ```
 # Frames
-In this thesis, the term "frame" stands for what is usually evaluation context in literature. This term was
-sellected to be sufficiently different from typing context.
+In this thesis, the term "frame" stands for what is usually an evaluation context in literature. This term was
+selected to be sufficiently different from typing context.
 The frame represents parts between `reset₀`s, or between `reset₀` and `shift₀`.
 Frame type is parametrized by Θ Γ, that is, the typing context outside of frame, a T type of the hole.
-It's also indexed by whole frame type and effects, and  the effects of the hole.
+It's also indexed by the whole frame type and effects, and  the effects of the hole.
 Frames  are intrinsically typed, thus they also store type judgements of subexpressions.
 They are defined in such a way to reduce repetition. Otherwise we would need to introduce typing judgements for frames, and then prove type preservation for every operation such as plugging or composition.
 
@@ -114,7 +114,7 @@ freset-label e en x x₁ x₂ f ∘f F = freset-label e en x x₁ x₂ (f ∘f F
 fshift-label e x x₁ f ∘f F = fshift-label e x x₁ (f ∘f F)
 ```
 \fi
-We can prove how plugging and composition relate.
+We prove how plugging and composition relate.
 Plugging an expression into one frame and result of that into another frame results in the same value and type
 as plugging the very same expression into a composition of two frames.
 ```
@@ -302,7 +302,7 @@ data _⨾_↦_⨾_⨾_ : (e : RExpr)
  → (e' : RExpr)
  → (∅ ⨾ Θ' ⨾ ∅ ⊢ e' ⦂ A / E) → Set where
 ```
-Reduction of `new` constructor replaces bound variable with allocated label, and type variable with entry in store typing. It also updates effects context, as we just allocated an effect.
+Reduction of `new` constructor replaces bound variable with allocated label, and type variable with entry in store typing. It also updates the effects context, as we just allocated an effect.
 ```
  ↦new : ∀ {e Θ  E T A1 E1}
   → (te : (∅ , Kind.E) ⨾ Θ ⨾(∅ , L ttv zero at A1 / E1)  ⊢ e ⦂ TypeSubst.bump T / TypeSubst.bump' E)
@@ -396,7 +396,7 @@ data Progress :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / nil) → Set 
     → e1 ⨾ te1 ⟶ Θ' ⨾ e2 ⨾ te2
     → Progress e1 te1
 ```
-Decompose datatype is similar to progress.Since we are building it upwards we might encounter shift but not yet it's corresponding reset. Because of that we introduces extra contructor that represents shift and it's surrounding frame. 
+Decompose datatype is similar to progress.Since we are building it upwards we might encounter a `shift₀`, but not yet its corresponding reset. Because of that we introduce an extra constructor that represents `shift₀` and its surrounding frame. 
 ```
 data Decompose :  (e : RExpr) → (∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / E) → Set where
   de-simpl-redex : ∀ {e1 e2 Θ'} 
