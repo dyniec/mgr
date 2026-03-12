@@ -149,11 +149,11 @@ Type parameters and indices work in the same way as in the frame.
 Unlike the frame, however the metaframe now stores `reset₀`s, so the lists of effects inside and outside the frame
 may differ. This means that their difference represents a list of effects handled by the frame.
 
-We will prove that for well-typed expressions they either are redex, value or they decompose into
+We will prove that for well-typed expressions they either make a step, are a value or they decompose into
 metaframe and `shift₀` expression.
 This and observation about diff-lists, will allow us to prove that if pure well-typed expression
 decomposes into shift and metaframe,
-then this metaframe should handle `shift₀`'s effect. Thus it has matching `reset₀` inside of frame, therefore whole expression is also a redex.
+then this metaframe should handle `shift₀`'s effect. Thus it has matching `reset₀` inside of frame, therefore whole expression also reduces.
 
 ```
 data Metaframe (Θ : EContext) (Γ : Context) (T : Type) (Eff : Effects)
@@ -421,7 +421,7 @@ In such proof we  use auxiliary struct `Decompose` of which builder `decompose` 
   until it has reached either value, simple reduction (app, tapp, new), or shift, and its  surrounding metaframe.
 
 In case of shift, such a metaframe by construction should have an effect handler that has the same effect as shift.
-So we can construct `rest₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in context.
+So we can construct `reset₀-k` and surrounding metaframe. Other cases would either be immediate value, or simple reduction in context.
 ```
 decompose : ∀ {A  Effs} → (e : RExpr) → (t : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / Effs) → Decompose  e t
 progress : ∀ {A } → (e : RExpr) → (t : ∅ ⨾ Θ ⨾ ∅ ⊢ e ⦂ A / nil) → Progress  e t

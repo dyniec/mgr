@@ -88,7 +88,7 @@ Most of the constructors in `RExpr` are the same as in `Expr`. Labels runtime va
 
 ```
 module RuntimeExpr where
-    data RExpr : Set where --runtime version
+    data RExpr : Set where
         var : ℕ → RExpr
         lam : RExpr → RExpr
         app : RExpr → RExpr → RExpr

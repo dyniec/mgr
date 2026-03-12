@@ -226,22 +226,6 @@ Typing rules for `var`, `lam`, `app`, `tlam`, and `tapp` are defined mostly as u
             → Δ , (Γ , A) ⊢ e ⦂ B / E
             ---------------------------------
             → Δ , Γ ⊢ lam e ⦂ A - E > B / F
-```
-Weakening utilises subtyping and subeffecting relations. Effect is defined as subeffect of another effect,
-if its list representation is a subsequence of the other effect.
-This does not allow for reordering or merging occurrences of same entries.
-Subtyping is defined recursively using subeffecting.
-That is, subtyping for arrows uses subeffecting on its effects, and uses subtyping recursively on input and output type of arrow while keeping proper variance.
-Subtyping for foralls is defined in a straightforward manner.
-Subtyping for labels is not implemented, as they precisely bind  type and effects of delimiter.
-```
-
-        ⊢weak : ∀ {Γ Δ e A A' E E'}
-            → Δ ⊢  A <t⦂ A'
-            → Δ ⊢  E <⦂ E'
-            → Δ , Γ ⊢ e ⦂ A / E
-            ---------------------
-            → Δ , Γ ⊢ e ⦂ A' / E' 
 
         ⊢app : ∀ {Γ Δ e1 e2 A B E}
             → Δ , Γ ⊢ e1 ⦂ A - E > B / E
@@ -259,6 +243,23 @@ Subtyping for labels is not implemented, as they precisely bind  type and effect
             → Δ , Γ ⊢ e ⦂ forallt k A E / E
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
+```
+Weakening utilises subtyping and subeffecting relations. Effect is defined as subeffect of another effect,
+if its list representation is a subsequence of the other effect.
+This does not allow for reordering or merging occurrences of same entries.
+Subtyping is defined recursively using subeffecting.
+That is, subtyping for arrows uses subeffecting on its effects, and uses subtyping recursively on input and output type of arrow while keeping proper variance.
+Subtyping for foralls is defined in a straightforward manner.
+Subtyping for labels is not implemented, as they precisely bind  type and effects of delimiter.
+```
+
+        ⊢weak : ∀ {Γ Δ e A A' E E'}
+            → Δ ⊢  A <t⦂ A'
+            → Δ ⊢  E <⦂ E'
+            → Δ , Γ ⊢ e ⦂ A / E
+            ---------------------
+            → Δ , Γ ⊢ e ⦂ A' / E'
+
 ```
 The `new` construct introduces a new type variable and a variable that represent respectively an effect and a label. The label type stores the effect bound by `new` (here `ttv zero`) and `A1` / `E2` representing a type and an effect of delimited computation.
 ```
