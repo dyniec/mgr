@@ -17,7 +17,7 @@ data Kind : Set where
 ```
 Types  and effects are defined as mutually recursive. A type is either a type variable `ttv`, an arrow, a `forallt` or a label `L eff at A / E`.
 We represent variables and type variables with de Bruijn indices.
-Effects datatype stores list of effects (represented as types), it's used in arrow and forall constructors of type to mark effects of computation underneath. It will be also used in typing judgements to mark effects available in computation. Constructor `L` represents type of label expressions. It just stores an effect `eff` represented by a label and then type and effect of delimited computation labelled by this label.
+Effects datatype stores a list of effects (represented as types), it's used in arrow and forall constructors of type to mark effects of computation underneath. It will be also used in typing judgements to mark effects available in computation. Constructor `L` represents type of label expressions. It just stores an effect `eff` represented by a label and type and effect of delimited computation labelled by this label.
 ```
 module Types where
     Id : Set
@@ -33,11 +33,11 @@ module Types where
 open Types
 ```
 Constructors of expressions such as `var`, `lam`, `app`, `tlam`, and `tapp` behave as usual.
-`var` is a de Bruijn indexed variable, `lam` is a lambda abstraction, `app` is a function application, `tlam` is a type abstraction, storing kind of abstracted type and `tapp` is type application.
+`var` is a de Bruijn indexed variable, `lam` is a lambda abstraction, `app` is a function application, `tlam` is a type abstraction, storing a kind of abstracted type and `tapp` is type application.
 Other constructors are responsible for continuations and labels. Constructor `new` binds labels used by `shift₀` and `reset₀` expressions to pair them up.
 Constructor `shift₀` stores the label and expression (parametrized by continuation) that replaces whole delimited computation.
-Last constructor of expressions is `reset₀ e (v . en) e'` which has 3 arguments, last one `e'` is label that is used to match up `reset₀`s with `shift₀`s. First argument `e` is delimited computation where `shift₀` can be used. So when `shift₀ k.es` is being evaluated, it aborts enclosing up to corresponding  `reset₀`, replacing it with  `es` is being evaluated with `k` bound to continuation representing evaluation context between `shift₀` and its `reset₀`.
-Second argument `x. en` is used when  no corresponding shift aborts during evaluation of `e`. If `e` evaluates to `v` - then whole `reset₀` reduces to `en` where `x` is bound to `v`.
+The last constructor of expressions is `reset₀ e (v . en) e'` which has 3 arguments, the last one `e'` is label that is used to match up `reset₀`s with `shift₀`s. First argument `e` is delimited computation where `shift₀` can be used. So when `shift₀ k.es` is being evaluated, it aborts enclosing up to corresponding  `reset₀`, replacing it with  `es` is being evaluated with `k` bound to continuation representing evaluation context between `shift₀` and its `reset₀`.
+Second argument `x. en` is used when  no corresponding `shift₀` aborts during evaluation of `e`. If `e` evaluates to `v`, then whole `reset₀` reduces to `en` where `x` is bound to `v`.
 
 
 ```
@@ -225,6 +225,15 @@ Typing rules for `var`, `lam`, `app`, `tlam`, and `tapp` are defined mostly as u
             → Δ , (Γ , A) ⊢ e ⦂ B / E
             ---------------------------------
             → Δ , Γ ⊢ lam e ⦂ A - E > B / F
+```
+Weakening utilises subtyping and subeffecting relations. Effect is defined as subeffect of another effect,
+if its list representation is a subsequence of the other effect.
+This does not allow for reordering or merging occurrences of same entries.
+Subtyping is defined recursively using subeffecting.
+That is, subtyping for arrows uses subeffecting on its effects, and uses subtyping recursively on input and output type of arrow while keeping proper variance.
+Subtyping for foralls is defined in a straightforward manner.
+Subtyping for labels is not implemented, as they precisely bind  type and effects of delimiter.
+```
 
         ⊢weak : ∀ {Γ Δ e A A' E E'}
             → Δ ⊢  A <t⦂ A'
@@ -250,7 +259,7 @@ Typing rules for `var`, `lam`, `app`, `tlam`, and `tapp` are defined mostly as u
             ---------------------------------------------------
             → Δ  , Γ ⊢ tapp e T ⦂ A TypeSubst.[ T ] / (E TypeSubst.effs[t T ])
 ```
-The `new` construct introduces a new type variable and a variable that represent respectively an   effect and a label. The label type stores effect bound by `new` (here `ttv zero`) and `A1` / `E2` representing a type and an effect of delimited computation.
+The `new` construct introduces a new type variable and a variable that represent respectively an effect and a label. The label type stores the effect bound by `new` (here `ttv zero`) and `A1` / `E2` representing a type and an effect of delimited computation.
 ```
         ⊢new : ∀ {Γ Δ e  A A1 E E1}
             → Δ ⊢ A1 ⦂t
@@ -259,8 +268,8 @@ The `new` construct introduces a new type variable and a variable that represent
             -----------------------
             → Δ , Γ ⊢ new e ⦂ A / E
 ```
-Constructor `shift₀ e' (k . e)` uses only one effect `E` represented by label `e'`. For it to be a properly typed expression inside shift, the constructor binds extra variable `k`, which is where continuation will be plugged.
-Therefore the type of this expression `e` should the same type and effect as stored in label type. Its typing context should be expanded to account for contination, which type should be an arrow from `shift₀` type to type and effect of whole delimited computation. Since during evaluation `reset₀` will be removed, effect `E` it has introduced will not be present in direct subexpressions of `shift₀`.
+Constructor `shift₀ e' (k . e)` uses only one effect `E` represented by label\ `e'`. For it to be a properly typed expression inside shift, the constructor binds an extra variable `k`, which is where continuation will be plugged.
+Therefore the type of this expression `e` should have the same type and effect as stored in the label type. Its typing context should be expanded to account for continuation, which type should be an arrow from `shift₀` type to type and effect of whole delimited computation. Since during evaluation `reset₀` will be removed, effect `E` it has introduced will not be present in direct subexpressions of `shift₀`.
 
 ```
         ⊢shift₀ : ∀ {Γ Δ e e' A A' E E'}
@@ -271,7 +280,7 @@ Therefore the type of this expression `e` should the same type and effect as sto
             → Δ , Γ ⊢ shift₀ e' e ⦂ A / (E ∷ nil)
 
 ```
-The `reset₀ e (v. en) e'` constructor has three parameters. The first one is expression `e` that will have access to the effect, so its list of effects is expanded. The second one is continuation `v . en` that will handle the value `v` returned from the first argument `e`. And third is the label `e'`, whose effect is the same one as one introduced in `e`. Label type also stores the type and effects of the whole delimited computaiton.
+The `reset₀ e (v. en) e'` constructor has three parameters. The first one is the expression `e` that will have access to the effect, so its list of effects is expanded. The second one is continuation `v . en` that will handle the value `v` returned from the first argument `e`. And third is the label `e'`, whose effect is the same one as one introduced in `e`. Label type also stores the type and effects of the whole delimited computation.
 ```
         ⊢reset₀ : ∀ {Γ Δ e e' en A A' E E'}
             → Δ ⊢ E ⦂e
