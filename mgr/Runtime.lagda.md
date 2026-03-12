@@ -1,11 +1,11 @@
 # Runtime language
 Grammar  defined in Chapter 2 does not produce any expression other than variable of label type, while `shift₀` and `reset₀` require the same labels.
-That translates into two options  to  define a reduction relation: going under `new` binders or introducing label expressions.
- We decided to go with second option and define another runtime expression language expanded by the notion of label values.
+Therefore we see two options  to  define a reduction relation: going under `new` binders or introducing label expressions.
+ We decided to go with the second option and define another runtime expression language expanded by the notion of label values.
 
-When `new` expression is evaluated, all occurrences of variables bound by it will have been replaced with the newly allocated label value. That means reduction relation would need to be defined using an allocator state.
+When the `new` expression is evaluated, all occurrences of variables bound by it will have been replaced with the newly allocated label value. That means reduction relation would need to be defined using an allocator state.
 
-To ensure type safety, we will expand type syntax to include allocated effects and add new effect context to typing judgments, which maps allocations to delimiter type and effect.
+To ensure type safety, we will expand type syntax to include allocated effects and add new effect context to typing judgments, which maps allocations to type and effect of the delimiter.
 
 \iffalse
 ```
@@ -126,8 +126,8 @@ A separate term for the label stores the allocated label identifier.
 ```
 \fi
 Since the grammar of types has changed, we need to redefine contexts. This means almost all typing judgements need to be redefined.
-A new context is introduced that maps label values to delimiter type and effects.
-In this store typing technique described by Pierce\cite{tapl},typing rules take maps from locations to types in order to ensure allocations' type safety. This context is represented by a finite vector of types and effects. As they are only used during evaluation, the types and effects have no free variables.
+A new context is introduced that maps label values to type and effects of the delimiter.
+This technique is reminiscent of technique described by Pierce\cite[Chapter 13]{tapl},typing rules take maps from locations to types in order to ensure allocations' type safety. This context is represented by a finite vector of types and effects. As they are only used during evaluation, the types and effects have no free variables.
 ```
 module Typing where
     open RuntimeExpr
@@ -248,7 +248,7 @@ module Typing where
 
 ```
 \fi
-Most typing judgements work as before. This paper does not discuss the ones that show up in surface language, as they simply pass extra context for effects throughout the rules.
+Most of typing judgements work as before. We omit the discussion of the ones that show up in surface language, as they simply pass extra context for effects throughout the rules.
 ```
     private
       variable
