@@ -19,8 +19,8 @@
 \frame{\titlepage}
 \begin{frame}
 \frametitle{Rachunek lambda}
-$ e := e\, e | \lambda x . e$ \\
-$ (\lambda x . e_1 ) e_2 \rightarrow e_1 [x / e_2]$
+$ e := x\, |\, e\, e\, |\, \lambda x . e$ \\
+$ (\lambda x . e_1 ) e_2 \rightarrow e_1 [e_2 /x]$
 \end{frame}
 \begin{frame}
 \frametitle{ Operatory sterowania}
@@ -63,12 +63,12 @@ Gdy ta kontynuacja jest zawołana reszta programu zostanie podmieniona przez ni�
 
 \begin{examples}
  \texttt{reset$_0$(3 + reset$_0$(4 * shift$_0$ k in shift$_0$ c in E))} \\
- $k$ = \texttt{$\lambda$ x.4*x}\\
- $c$ = \texttt{$\lambda$ x.3+x}
+ $k$ $\approx$ \texttt{$\lambda$ x.4*x}\\
+ $c$ $\approx$ \texttt{$\lambda$ x.3+x}
 \end{examples}
 \end{frame}
 \begin{frame}
-\frametitle{Multiprompty i typy}
+\frametitle{Multiprompty/labele}
 \begin{itemize}
 \item dopasowanie operatorów po promptach
 \item \texttt{shift-at} i \texttt{reset-at}
