@@ -19,29 +19,104 @@
 \frame{\titlepage}
 \begin{frame}
 \frametitle{Rachunek lambda}
+$ e := e\, e | \lambda x . e$ \\
+$ (\lambda x . e_1 ) e_2 \rightarrow e_1 [x / e_2]$
 \end{frame}
 \begin{frame}
-\frametitle{Scheme i call/cc}
+\frametitle{ Operatory sterowania}
+\begin{itemize}
+\item Kontrola przepływem sterowania
+\item Pierwszoklasowe wartości
+\item Możliwość składania ze zwykłymi funkcjami
+\item Symulacja efektów
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Scheme\cite{scheme} i call/cc}
+Operator \texttt{call/cc} łapie całą resztę programu i przekazuje jako parametr.
+
+Gdy ta kontynuacja jest zawołana reszta programu zostanie podmieniona przez nią.
+\begin{examples}
+\texttt{10 + (call/cc ($\lambda$ k . k (2 + (k 1))))}
+\end{examples}
 \end{frame}
 \begin{frame}
 \frametitle{Kontynuacje ograniczone}
+\begin{itemize}
+\item widać zakres
+\item normalne funkcje
+\item $\#$ i  $\mathcal {F}$ \cite{prompts}
+\item \texttt{shift} i \texttt{reset} \cite{abstracting}
+\end{itemize}
+\begin{block}{Redukcja}
+\texttt{(reset E[(shift k expr)]) \\ => (reset (($\lambda$ k.expr) ($\lambda$ v.(reset E[v]))))}
+\end{block}
+\begin{examples}
+\texttt{2* (reset (+ 1 (shift k (k (k 1)))))}
+\end{examples}
 \end{frame}
 \begin{frame}
-\frametitle{$shift_0$ i $reset_0$}
-\end{frame}
-\begin{frame}
-\frametitle{Systemy typów i efektów}
+\frametitle{$shift_0$ i $reset_0$ \cite{functional_abstraction}}
+\begin{block}{Redukcja}
+\texttt{(reset$_0$ E[(shift$_0$ k expr)]) \\ => ($\lambda$ k.expr) ($\lambda$ v.(reset$_0$ E[v]))}
+\end{block}
+
+\begin{examples}
+ \texttt{reset$_0$(3 + reset$_0$(4 * shift$_0$ k in shift$_0$ c in E))} \\
+ $k$ = \texttt{$\lambda$ x.4*x}\\
+ $c$ = \texttt{$\lambda$ x.3+x}
+\end{examples}
 \end{frame}
 \begin{frame}
 \frametitle{Multiprompty i typy}
+\begin{itemize}
+\item dopasowanie operatorów po promptach
+\item \texttt{shift-at} i \texttt{reset-at}
+\end{itemize}
 \end{frame}
 \begin{frame}
-\frametitle{Fram}
+\frametitle{Systemy typów i efektów}
+\begin{itemize}
+\item "well-typed programs cannot go wrong" 
+\item Typed Equivalence of Effect Handlers and
+Delimited Control \cite{typed_equivalence}
+\item Typed Equivalence of Labeled Effect Handlers and Labeled Delimited
+Control Operators \cite{typed_equivalence_label}
+\item First-Class Names for Effect Handlers \cite{first_class_names}
+\end{itemize}
 \end{frame}
 \begin{frame}
 \frametitle{Rozważany rachunek}
+\begin{itemize}
+\item typowany
+\item polimorficzny
+\item z dynamicznymi operatorami sterowania
+\item dla kontynuacji ograniczonych
+\end{itemize}
+\end{frame}
+\begin{frame}
+\frametitle{Motywacja}
+Język Fram używa opisanego wcześniej rachunku jako Core.
 \end{frame}
 \begin{frame}
 \frametitle{O implementacji}
+\begin{itemize}
+\item Przeprowadzona w języku Agda \cite{agda}
+\item Bez użycia zewnętrznych bibliotek
+\end{itemize}
 \end{frame}
+\begin{frame}
+\frametitle{Co zostało wykonane}
+\begin{itemize}
+\item 2 języki i ich systemy typów
+\item translacja między nimi z dowodem o zachowaniu typów
+\item Standardowe metody dowodów
+\item Zdefiniowana semantyka
+\item Dowód zachowania typów
+\item Dowód postępu (częściowo)
+\end{itemize}
+\end{frame}
+\begin{thebibliography}{1}
+\input{../bibitems.tex}
+\end{thebibliography}
 \end{document}
